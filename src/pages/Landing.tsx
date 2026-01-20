@@ -36,29 +36,28 @@ const slides = [slide1, slide2, slide3, slide4, slide5];
 
 const bestSellers = [
   {
-    name: 'Copy Paper',
+    name: 'Kertas HVS Copy Paper 75 gsm',
     image: copyPaperImg,
     description: 'Kertas HVS berkualitas tinggi untuk kebutuhan fotocopy dan printing.',
   },
   {
-    name: 'Campus',
+    name: 'Buku Tulis Campus 42 Lembar',
     image: campusImg,
     description: 'Buku tulis premium dengan kertas berkualitas untuk pelajar dan mahasiswa.',
   },
   {
-    name: 'Aone',
+    name: 'Kertas HVS Aone 70 gsm',
     image: aoneImg,
     description: 'Kertas multi purpose quality paper untuk segala kebutuhan.',
   },
 ];
 
 const storeProfile = {
-  yearFounded: '2020',
-  address: 'Jl. Raya Puri Asri 3 No.1 Blok D.2, Jonggol, Kec. Jonggol, Kabupaten Bogor, Jawa Barat 16830',
+  yearFounded: '2025',
+  address: 'Jl. Rawa Gembira, Perumahan PURI ASRI 3 JONGGOL Blok D.2 No.1, Bogor, Jawa Barat',
   phone: '+62 858-9004-0522',
-  email: 'contact@store.com',
-  description: 'Toko alat tulis dan perlengkapan kantor terlengkap dengan harga bersaing. Melayani pembelian retail dan grosir untuk kebutuhan sekolah, kantor, dan rumah tangga.',
-  mapsLink: 'https://share.google/uDQWrVpHUmPlATK05',
+  email: 'muthiaratk25@gmail.com',
+  description: 'MuthiarATK merupakan perusahaan Multi Business Company yang berdiri pada tahun 2025 dimana salah satu bisnisnya bergerak dibidang supplier penyedia barang dan jasa, mencakup : Distributor Kertas HVS, ATK, Kebutuhan Sekolah serta percetakan dan printing. Kami Bekerja sama dengan semua Produk Kertas terutama dengan APP SINARMAS dan APRIL GROUP dengan tujuan untuk membangun Supplier terpercaya yang hanya memberikan produk yang original keluaran pabrik langsung dengan harga yang kompetitif. Kami percaya bahwa “Kepuasan Pelanggan” adalah prioritas utama dalam berbisnis. Sehingga prioritas tersebut kami bangun dengan memberikan pelayanan yang optimal serta professional melalui SDM yang kami miliki, dan juga dengan relasi yang kami bangun melalui produsen serta distributor yang hanya membuat produk original dan harga yang kompetitif. Oleh karena itu, hal tersebut kami jadikan sebagai standard untuk memberikan pelayanan mutu yang terbaik kepada seluruh pelanggan kami',
 };
 
 export default function Landing() {
@@ -278,7 +277,7 @@ export default function Landing() {
           <Card className="mx-auto max-w-4xl overflow-hidden border-border">
             <div className="relative w-full h-[400px]">
               <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3963.8973424618424!2d107.0096541!3d-6.4916389!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e69a5555555555%3A0x5555555555555555!2sJl.%20Raya%20Puri%20Asri%203%20No.1%20Blok%20D.2%2C%20Jonggol%2C%20Kec.%20Jonggol%2C%20Kabupaten%20Bogor%2C%20Jawa%20Barat%2016830!5e0!3m2!1sid!2sid!4v1704931200000!5m2!1sid!2sid"
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d126867.50040793895!2d106.99330949797205!3d-6.4441736013547315!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e6997a2d5e703a7%3A0xfe81de73c7393b24!2sDistributor%20Supplier%20Kertas%20HVS!5e0!3m2!1sid!2sid!4v1768309394187!5m2!1sid!2sid"
                 width="100%"
                 height="100%"
                 style={{ border: 0 }}
@@ -296,7 +295,7 @@ export default function Landing() {
                   <h3 className="font-semibold text-foreground">{storeSettings.storeName}</h3>
                   <p className="text-muted-foreground">{storeProfile.address}</p>
                   <a
-                    href={storeProfile.mapsLink}
+                    href="https://share.google/A3cvB5U1BOhmsqhXI"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-2 inline-flex items-center gap-1 text-primary hover:underline"
