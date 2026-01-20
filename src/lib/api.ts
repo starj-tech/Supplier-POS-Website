@@ -42,6 +42,8 @@ async function apiRequest<T>(
       headers['Authorization'] = `Bearer ${token}`;
     }
 
+    console.log(`[API] ${options.method || 'GET'} ${endpoint}`);
+
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
       headers,
@@ -50,13 +52,16 @@ async function apiRequest<T>(
 
     // Try to parse JSON response
     let result;
+    const responseText = await response.text();
+    
     try {
-      result = await response.json();
-    } catch {
-      // If response is not JSON, return generic error
+      result = responseText ? JSON.parse(responseText) : {};
+      console.log(`[API] Response:`, result);
+    } catch (parseError) {
+      console.error('[API] Failed to parse response:', responseText);
       return { 
         success: false, 
-        error: `Server error: ${response.status}` 
+        error: `Server error: Invalid JSON response (${response.status})` 
       };
     }
 
@@ -73,9 +78,14 @@ async function apiRequest<T>(
       return { success: false, error: result.error || 'Request failed' };
     }
 
-    return { success: true, data: result.data };
+    // Handle both direct data and wrapped data response
+    // PHP API returns: { success: true, data: [...] } for GET
+    // Or: { success: true, message: "...", data: {...} } for POST/PUT
+    const data = result.data !== undefined ? result.data : result;
+    
+    return { success: true, data };
   } catch (error) {
-    console.error('API Error:', error);
+    console.error('[API] Error:', error);
     // Return more descriptive error for debugging
     const errorMessage = error instanceof Error ? error.message : 'Network error';
     return { 

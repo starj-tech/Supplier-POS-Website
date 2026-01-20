@@ -104,9 +104,12 @@ export function useApiProducts() {
     
     try {
       const result = await productsApi.getAll();
+      console.log('[useApiProducts] Fetch result:', result);
       
-      if (result.success && result.data) {
-        setProducts(result.data.map(transformApiProduct));
+      if (result.success) {
+        const data = Array.isArray(result.data) ? result.data : [];
+        console.log('[useApiProducts] Setting products:', data.length, 'items');
+        setProducts(data.map(transformApiProduct));
       } else {
         setError(result.error || 'Gagal memuat produk');
         // Only show toast for non-auth and non-network errors
@@ -244,9 +247,12 @@ export function useApiTransactions() {
     
     try {
       const result = await transactionsApi.getAll();
+      console.log('[useApiTransactions] Fetch result:', result);
       
-      if (result.success && result.data) {
-        setTransactions(result.data.map((t, i) => transformApiTransaction(t, i)));
+      if (result.success) {
+        const data = Array.isArray(result.data) ? result.data : [];
+        console.log('[useApiTransactions] Setting transactions:', data.length, 'items');
+        setTransactions(data.map((t, i) => transformApiTransaction(t, i)));
       } else {
         setError(result.error || 'Gagal memuat transaksi');
         // Only show toast for non-auth and non-network errors
@@ -360,9 +366,12 @@ export function useApiExpenses() {
     
     try {
       const result = await expensesApi.getAll();
+      console.log('[useApiExpenses] Fetch result:', result);
       
-      if (result.success && result.data) {
-        setExpenses(result.data.map(transformApiExpense));
+      if (result.success) {
+        const data = Array.isArray(result.data) ? result.data : [];
+        console.log('[useApiExpenses] Setting expenses:', data.length, 'items');
+        setExpenses(data.map(transformApiExpense));
       } else {
         setError(result.error || 'Gagal memuat pengeluaran');
         // Only show toast for non-auth and non-network errors
