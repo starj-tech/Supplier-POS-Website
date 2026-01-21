@@ -14,11 +14,89 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
     case 'GET':
-        getProducts($conn);
+        try {
+        // Ambil semua produk milik user yang sedang login
+            $stmt = $conn->prepare("
+                SELECT 
+                    id,
+                    name,
+                     code,
+                    stock,
+                    purchase_price,
+                    selling_price,
+                    (stock * purchase_price) AS total_modal,
+                    (stock * (selling_price - purchase_price)) AS estimasi_keuntungan
+                FROM products
+                WHERE user_id = :user_id
+                ORDER BY created_at DESC
+            ");
+
+            $stmt->execute([
+                ':user_id' => $currentUser['id']
+            ]);
+
+            $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Hitung ringkasan untuk dashboard
+            $totalStock = 0;
+            $totalModal = 0;
+            $totalEstimasiKeuntungan = 0;
+
+            foreach ($products as $product) {
+                $totalStock += (int)$product['stock'];
+                $totalModal += (float)$product['total_modal'];
+                $totalEstimasiKeuntungan += (float)$product['estimasi_keuntungan'];
+            }
+
+            echo json_encode([
+                "success" => true,
+                "data" => $products,
+                "summary" => [
+                    "total_stock" => $totalStock,
+                    "total_modal" => $totalModal,
+                    "estimasi_keuntungan" => $totalEstimasiKeuntungan
+                ]
+            ]);
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode([
+                "success" => false,
+                "error" => $e->getMessage()
+            ]);
+        }
         break;
+
     case 'POST':
-        createProduct($conn);
+        try {
+            $data = json_decode(file_get_contents("php://input"), true);
+
+            $id = generateUUID();
+
+            $query = "INSERT INTO products 
+                (id, name, code, stock, purchase_price, selling_price, user_id)
+                VALUES (:id, :name, :code, :stock, :purchase_price, :selling_price, :user_id)";
+
+            $stmt = $conn->prepare($query);
+            $stmt->execute([
+                ':id' => $id,
+                ':name' => $data['name'],
+                ':code' => $data['code'],
+                ':stock' => $data['stock'],
+                ':purchase_price' => $data['purchase_price'],
+                ':selling_price' => $data['selling_price'],
+                ':user_id' => $currentUser['id']
+            ]);
+
+            echo json_encode([
+                "success" => true,
+                "message" => "Product created"
+            ]);
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo json_encode(["error" => $e->getMessage()]);
+        }
         break;
+
     case 'PUT':
         updateProduct($conn);
         break;
@@ -175,4 +253,5 @@ function generateUUID() {
         mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
     );
 }
+
 ?>
