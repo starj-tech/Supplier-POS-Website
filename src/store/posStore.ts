@@ -86,7 +86,7 @@ export const usePOSStore = create<POSStore>()(
       cart: [],
       otherExpenses: [],
       storeSettings: {
-        storeName: 'TokoPOS',
+        storeName: 'Distributor & Supplier Kertas',
         storeLogo: '',
       },
 

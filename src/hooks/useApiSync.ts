@@ -136,13 +136,18 @@ export function useApiProducts() {
     harga_beli: number; 
     harga_jual: number; 
   }) => {
+    console.log('[useApiProducts] Adding product:', data);
     const result = await productsApi.create({
       nama: data.nama_produk,
       harga: data.harga_jual,
       stok: data.jumlah_stok,
     });
     
+    console.log('[useApiProducts] Add result:', result);
+    
     if (result.success) {
+      // Force refetch products after successful add
+      console.log('[useApiProducts] Add successful, refetching products...');
       await fetchProducts();
       return { success: true };
     } else {

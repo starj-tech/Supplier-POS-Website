@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { 
-  ShoppingCart, 
+  FileText, 
   ArrowRight,
   MessageCircle,
   MapPin,
@@ -57,7 +57,7 @@ const storeProfile = {
   address: 'Jl. Rawa Gembira, Perumahan PURI ASRI 3 JONGGOL Blok D.2 No.1, Bogor, Jawa Barat',
   phone: '+62 858-9004-0522',
   email: 'muthiaratk25@gmail.com',
-  description: 'MuthiarATK merupakan perusahaan Multi Business Company yang berdiri pada tahun 2025 dimana salah satu bisnisnya bergerak dibidang supplier penyedia barang dan jasa, mencakup : Distributor Kertas HVS, ATK, Kebutuhan Sekolah serta percetakan dan printing. Kami Bekerja sama dengan semua Produk Kertas terutama dengan APP SINARMAS dan APRIL GROUP dengan tujuan untuk membangun Supplier terpercaya yang hanya memberikan produk yang original keluaran pabrik langsung dengan harga yang kompetitif. Kami percaya bahwa “Kepuasan Pelanggan” adalah prioritas utama dalam berbisnis. Sehingga prioritas tersebut kami bangun dengan memberikan pelayanan yang optimal serta professional melalui SDM yang kami miliki, dan juga dengan relasi yang kami bangun melalui produsen serta distributor yang hanya membuat produk original dan harga yang kompetitif. Oleh karena itu, hal tersebut kami jadikan sebagai standard untuk memberikan pelayanan mutu yang terbaik kepada seluruh pelanggan kami',
+  description: 'MuthiarATK merupakan perusahaan Multi Business Company yang berdiri pada tahun 2025 dimana salah satu bisnisnya bergerak dibidang supplier penyedia barang dan jasa, mencakup : Distributor Kertas HVS, ATK, Kebutuhan Sekolah serta percetakan dan printing. Kami Bekerja sama dengan semua Produk Kertas terutama dengan APP SINARMAS dan APRIL GROUP dengan tujuan untuk membangun Supplier terpercaya yang hanya memberikan produk yang original keluaran pabrik langsung dengan harga yang kompetitif. Kami percaya bahwa "Kepuasan Pelanggan" adalah prioritas utama dalam berbisnis. Sehingga prioritas tersebut kami bangun dengan memberikan pelayanan yang optimal serta professional melalui SDM yang kami miliki, dan juga dengan relasi yang kami bangun melalui produsen serta distributor yang hanya membuat produk original dan harga yang kompetitif. Oleh karena itu, hal tersebut kami jadikan sebagai standard untuk memberikan pelayanan mutu yang terbaik kepada seluruh pelanggan kami',
 };
 
 export default function Landing() {
@@ -91,10 +91,10 @@ export default function Landing() {
               {storeSettings.storeLogo ? (
                 <img src={storeSettings.storeLogo} alt="Logo" className="h-full w-full object-cover" />
               ) : (
-                <ShoppingCart className="h-5 w-5 text-primary-foreground" />
+                <FileText className="h-5 w-5 text-primary-foreground" />
               )}
             </div>
-            <span className="text-xl font-bold text-foreground">
+            <span className="text-xl font-bold text-foreground" style={{ fontFamily: "'Quicksand', sans-serif" }}>
               {storeSettings.storeName}
             </span>
           </div>
@@ -174,11 +174,11 @@ export default function Landing() {
       {/* Store Profile Section */}
       <section className="border-t border-border bg-secondary/30 py-16">
         <div className="container mx-auto px-4">
-          <div className="mx-auto max-w-2xl text-center">
+          <div className="mx-auto max-w-4xl text-center">
             <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
               Profile Toko
             </h2>
-            <p className="mt-4 text-lg text-muted-foreground">
+            <p className="mt-4 text-lg text-muted-foreground text-justify leading-relaxed">
               {storeProfile.description}
             </p>
           </div>
@@ -232,7 +232,7 @@ export default function Landing() {
           </div>
           
           <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {bestSellers.map((product, index) => (
+            {bestSellers.map((product) => (
               <Card
                 key={product.name}
                 className="group overflow-hidden border-border transition-all duration-300 hover:shadow-xl"
@@ -318,10 +318,10 @@ export default function Landing() {
               {storeSettings.storeLogo ? (
                 <img src={storeSettings.storeLogo} alt="Logo" className="h-full w-full object-cover" />
               ) : (
-                <ShoppingCart className="h-4 w-4 text-primary-foreground" />
+                <FileText className="h-4 w-4 text-primary-foreground" />
               )}
             </div>
-            <span className="font-semibold text-foreground">
+            <span className="font-semibold text-foreground" style={{ fontFamily: "'Quicksand', sans-serif" }}>
               {storeSettings.storeName}
             </span>
           </div>

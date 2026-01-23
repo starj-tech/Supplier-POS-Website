@@ -80,5 +80,5 @@ export function exportDashboardToExcel(
   const transactionWs = XLSX.utils.json_to_sheet(transactionData);
   XLSX.utils.book_append_sheet(wb, transactionWs, 'Transaksi');
 
-  XLSX.writeFile(wb, `Laporan_POS_${new Date().toISOString().split('T')[0]}.xlsx`);
+  XLSX.writeFile(wb, `Laporan_Kertas_${new Date().toISOString().split('T')[0]}.xlsx`);
 }

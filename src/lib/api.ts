@@ -43,6 +43,10 @@ async function apiRequest<T>(
     }
 
     console.log(`[API] ${options.method || 'GET'} ${endpoint}`);
+    console.log(`[API] Request headers:`, headers);
+    if (options.body) {
+      console.log(`[API] Request body:`, options.body);
+    }
 
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
@@ -50,13 +54,16 @@ async function apiRequest<T>(
       mode: 'cors',
     });
 
+    console.log(`[API] Response status:`, response.status);
+
     // Try to parse JSON response
     let result;
     const responseText = await response.text();
+    console.log(`[API] Raw response:`, responseText);
     
     try {
       result = responseText ? JSON.parse(responseText) : {};
-      console.log(`[API] Response:`, result);
+      console.log(`[API] Parsed response:`, result);
     } catch (parseError) {
       console.error('[API] Failed to parse response:', responseText);
       return { 

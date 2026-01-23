@@ -14,20 +14,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
     case 'GET':
-        $stmt = $conn->prepare("
-            SELECT 
-                COALESCE(SUM(amount), 0) AS total_expenses
-            FROM expenses
-            WHERE user_id = :user_id
-        ");
-        $stmt->execute([
-            ':user_id' => $currentUser['id']
-        ]);
-
-        echo json_encode([
-            "success" => true,
-            "total_expenses" => $stmt->fetchColumn()
-        ]);
+        getExpenses($conn);
         break;
     case 'POST':
         createExpense($conn);

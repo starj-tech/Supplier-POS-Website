@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, ShoppingCart, Receipt, ChevronLeft, ChevronRight, Settings, Upload, X, LogOut, Home, CreditCard } from 'lucide-react';
+import { LayoutDashboard, Package, FileText, Receipt, ChevronLeft, ChevronRight, Settings, Upload, X, LogOut, Home, CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState, useRef } from 'react';
 import { usePOSStore } from '@/store/posStore';
@@ -19,7 +19,7 @@ import { Label } from '@/components/ui/label';
 const menuItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/stok', label: 'Stok Barang', icon: Package },
-  { path: '/pos', label: 'POS Transaksi', icon: ShoppingCart },
+  { path: '/pos', label: 'POS Transaksi', icon: FileText },
   { path: '/riwayat', label: 'Riwayat Transaksi', icon: Receipt },
   { path: '/pengeluaran', label: 'Pengeluaran Lain', icon: CreditCard },
 ];
@@ -87,10 +87,10 @@ export function Sidebar() {
           {!collapsed && (
             <div className="flex items-center gap-2">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-sidebar-primary overflow-hidden">
-                {storeSettings.storeLogo ? (
+              {storeSettings.storeLogo ? (
                   <img src={storeSettings.storeLogo} alt="Logo" className="h-full w-full object-cover" />
                 ) : (
-                  <ShoppingCart className="h-5 w-5 text-sidebar-primary-foreground" />
+                  <FileText className="h-5 w-5 text-sidebar-primary-foreground" />
                 )}
               </div>
               <span className="text-lg font-bold text-sidebar-foreground">
@@ -123,10 +123,10 @@ export function Sidebar() {
                       <Label>Logo Toko</Label>
                       <div className="flex items-center gap-4">
                         <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-dashed border-border bg-muted overflow-hidden">
-                          {editLogo ? (
+                        {editLogo ? (
                             <img src={editLogo} alt="Logo Preview" className="h-full w-full object-cover" />
                           ) : (
-                            <ShoppingCart className="h-6 w-6 text-muted-foreground" />
+                            <FileText className="h-6 w-6 text-muted-foreground" />
                           )}
                         </div>
                         <div className="flex flex-col gap-2">
@@ -181,10 +181,10 @@ export function Sidebar() {
                   onClick={handleOpenDialog}
                   className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg bg-sidebar-primary overflow-hidden hover:ring-2 hover:ring-sidebar-primary/50 transition-all"
                 >
-                  {storeSettings.storeLogo ? (
+                {storeSettings.storeLogo ? (
                     <img src={storeSettings.storeLogo} alt="Logo" className="h-full w-full object-cover" />
                   ) : (
-                    <ShoppingCart className="h-5 w-5 text-sidebar-primary-foreground" />
+                    <FileText className="h-5 w-5 text-sidebar-primary-foreground" />
                   )}
                 </button>
               </DialogTrigger>
@@ -209,7 +209,7 @@ export function Sidebar() {
                         {editLogo ? (
                           <img src={editLogo} alt="Logo Preview" className="h-full w-full object-cover" />
                         ) : (
-                          <ShoppingCart className="h-6 w-6 text-muted-foreground" />
+                          <FileText className="h-6 w-6 text-muted-foreground" />
                         )}
                       </div>
                       <div className="flex flex-col gap-2">
@@ -287,7 +287,7 @@ export function Sidebar() {
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
           >
             <Home className="h-5 w-5 flex-shrink-0" />
-            {!collapsed && <span>Home</span>}
+            {!collapsed && <span style={{ fontFamily: "'Quicksand', sans-serif" }}>Distributor & Supplier Kertas</span>}
           </Link>
           <button
             onClick={handleLogout}
