@@ -7,7 +7,7 @@ require_once '../../middleware/auth.php';
 $database = new Database();
 $conn = $database->getConnection();
 
-// Validate token for all requests - this protects the endpoint
+// Validate token for all requests
 $currentUser = requireAuth();
 
 $method = $_SERVER['REQUEST_METHOD'];
@@ -37,7 +37,7 @@ function getTransactions($conn) {
         echo json_encode(["success" => true, "data" => $transactions]);
     } catch (PDOException $e) {
         http_response_code(500);
-        echo json_encode(["error" => $e->getMessage()]);
+        echo json_encode(["error" => "Database error: " . $e->getMessage()]);
     }
 }
 
@@ -47,7 +47,7 @@ function createTransaction($conn) {
         
         if (!isset($data['nama_produk']) || !isset($data['qty']) || !isset($data['harga'])) {
             http_response_code(400);
-            echo json_encode(["error" => "Missing required fields"]);
+            echo json_encode(["error" => "Missing required fields: nama_produk, qty, harga"]);
             return;
         }
         
@@ -56,8 +56,11 @@ function createTransaction($conn) {
         $qty = intval($data['qty']);
         $harga = floatval($data['harga']);
         $total = $qty * $harga;
-        $metode = isset($data['metode_pembayaran']) ? $data['metode_pembayaran'] : 'cash';
         
+        // Accept payment method - use 'Tunai' as default
+        $metode = isset($data['metode_pembayaran']) ? trim($data['metode_pembayaran']) : 'Tunai';
+        
+        // Use basic INSERT that works with existing schema (without product_id column)
         $stmt = $conn->prepare("INSERT INTO transactions (id, nama_produk, qty, harga, total, metode_pembayaran) VALUES (:id, :nama_produk, :qty, :harga, :total, :metode)");
         $stmt->bindParam(':id', $id);
         $stmt->bindParam(':nama_produk', $nama_produk);
@@ -67,12 +70,17 @@ function createTransaction($conn) {
         $stmt->bindParam(':metode', $metode);
         $stmt->execute();
         
-        // Update product stock if product_id provided
-        if (isset($data['product_id'])) {
-            $updateStmt = $conn->prepare("UPDATE products SET stok = stok - :qty WHERE id = :product_id AND stok >= :qty");
-            $updateStmt->bindParam(':qty', $qty);
-            $updateStmt->bindParam(':product_id', $data['product_id']);
-            $updateStmt->execute();
+        // Update product stock if product_id provided (optional - only if column exists)
+        if (isset($data['product_id']) && $data['product_id']) {
+            try {
+                $updateStmt = $conn->prepare("UPDATE products SET stok = stok - :qty WHERE id = :product_id AND stok >= :qty2");
+                $updateStmt->bindParam(':qty', $qty);
+                $updateStmt->bindParam(':product_id', $data['product_id']);
+                $updateStmt->bindParam(':qty2', $qty);
+                $updateStmt->execute();
+            } catch (PDOException $e) {
+                // Silently ignore if update fails (stock tracking is optional)
+            }
         }
         
         echo json_encode([
@@ -89,7 +97,7 @@ function createTransaction($conn) {
         ]);
     } catch (PDOException $e) {
         http_response_code(500);
-        echo json_encode(["error" => $e->getMessage()]);
+        echo json_encode(["error" => "Database error: " . $e->getMessage()]);
     }
 }
 
@@ -107,6 +115,9 @@ function updateTransaction($conn) {
         $updates = [];
         $params = [':id' => $id];
         
+        $qty = null;
+        $harga = null;
+        
         if (isset($data['nama_produk'])) {
             $updates[] = "nama_produk = :nama_produk";
             $params[':nama_produk'] = trim($data['nama_produk']);
@@ -114,31 +125,36 @@ function updateTransaction($conn) {
         if (isset($data['qty'])) {
             $updates[] = "qty = :qty";
             $params[':qty'] = intval($data['qty']);
+            $qty = intval($data['qty']);
         }
         if (isset($data['harga'])) {
             $updates[] = "harga = :harga";
             $params[':harga'] = floatval($data['harga']);
-        }
-        if (isset($data['qty']) || isset($data['harga'])) {
-            $qty = isset($data['qty']) ? intval($data['qty']) : null;
-            $harga = isset($data['harga']) ? floatval($data['harga']) : null;
-            
-            // Get current values if not provided
-            if ($qty === null || $harga === null) {
-                $getStmt = $conn->prepare("SELECT qty, harga FROM transactions WHERE id = :id");
-                $getStmt->bindParam(':id', $id);
-                $getStmt->execute();
-                $current = $getStmt->fetch();
-                if ($qty === null) $qty = $current['qty'];
-                if ($harga === null) $harga = $current['harga'];
-            }
-            
-            $updates[] = "total = :total";
-            $params[':total'] = $qty * $harga;
+            $harga = floatval($data['harga']);
         }
         if (isset($data['metode_pembayaran'])) {
             $updates[] = "metode_pembayaran = :metode";
-            $params[':metode'] = $data['metode_pembayaran'];
+            $params[':metode'] = trim($data['metode_pembayaran']);
+        }
+        
+        // Recalculate total if qty or harga changed
+        if ($qty !== null || $harga !== null) {
+            // Get current values if not provided
+            if ($qty === null || $harga === null) {
+                $currentStmt = $conn->prepare("SELECT qty, harga FROM transactions WHERE id = :id");
+                $currentStmt->bindParam(':id', $id);
+                $currentStmt->execute();
+                $current = $currentStmt->fetch();
+                
+                if ($current) {
+                    if ($qty === null) $qty = intval($current['qty']);
+                    if ($harga === null) $harga = floatval($current['harga']);
+                }
+            }
+            
+            $total = $qty * $harga;
+            $updates[] = "total = :total";
+            $params[':total'] = $total;
         }
         
         if (empty($updates)) {
@@ -159,7 +175,7 @@ function updateTransaction($conn) {
         echo json_encode(["success" => true, "message" => "Transaction updated successfully"]);
     } catch (PDOException $e) {
         http_response_code(500);
-        echo json_encode(["error" => $e->getMessage()]);
+        echo json_encode(["error" => "Database error: " . $e->getMessage()]);
     }
 }
 
@@ -186,7 +202,7 @@ function deleteTransaction($conn) {
         }
     } catch (PDOException $e) {
         http_response_code(500);
-        echo json_encode(["error" => $e->getMessage()]);
+        echo json_encode(["error" => "Database error: " . $e->getMessage()]);
     }
 }
 

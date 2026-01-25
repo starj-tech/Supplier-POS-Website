@@ -103,6 +103,7 @@ async function apiRequest<T>(
 }
 
 // Products API (protected - requires auth)
+// Uses basic schema: id, nama, harga, stok
 export const productsApi = {
   getAll: () => apiRequest<any[]>('/products'),
   
@@ -135,7 +136,7 @@ export const transactionsApi = {
     nama_produk: string;
     qty: number;
     harga: number;
-    metode_pembayaran?: 'cash' | 'transfer' | 'qris';
+    metode_pembayaran?: string;
     product_id?: string;
   }) =>
     apiRequest<any>('/transactions', {

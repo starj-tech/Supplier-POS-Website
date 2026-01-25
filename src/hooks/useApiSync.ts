@@ -15,6 +15,9 @@ interface ApiProduct {
   updated_at?: string;
 }
 
+// Payment method type matching frontend values
+type PaymentMethodType = 'Tunai' | 'Shopee' | 'Tokopedia';
+
 interface ApiTransaction {
   id: string;
   no?: number;
@@ -129,14 +132,15 @@ export function useApiProducts() {
     }
   }, [toast]);
   const addProduct = useCallback(async (data: { 
-    kode_produk: string; 
+    kode_produk?: string; 
     nama_produk: string; 
     gambar?: string;
     jumlah_stok: number; 
-    harga_beli: number; 
+    harga_beli?: number; 
     harga_jual: number; 
   }) => {
     console.log('[useApiProducts] Adding product:', data);
+    // Only send basic fields that exist in the database schema
     const result = await productsApi.create({
       nama: data.nama_produk,
       harga: data.harga_jual,
@@ -281,10 +285,19 @@ export function useApiTransactions() {
     nama_produk: string;
     qty: number;
     harga: number;
-    metode_pembayaran?: 'cash' | 'transfer' | 'qris';
+    metode_pembayaran?: PaymentMethodType;
     product_id?: string;
   }) => {
-    const result = await transactionsApi.create(data);
+    console.log('[useApiTransactions] Creating transaction:', data);
+    const result = await transactionsApi.create({
+      nama_produk: data.nama_produk,
+      qty: data.qty,
+      harga: data.harga,
+      metode_pembayaran: data.metode_pembayaran || 'Tunai',
+      product_id: data.product_id,
+    });
+    
+    console.log('[useApiTransactions] Create result:', result);
     
     if (result.success) {
       await fetchTransactions();

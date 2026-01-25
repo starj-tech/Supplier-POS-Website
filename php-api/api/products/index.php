@@ -53,7 +53,7 @@ function getProducts($conn) {
         }
     } catch (PDOException $e) {
         http_response_code(500);
-        echo json_encode(["error" => $e->getMessage()]);
+        echo json_encode(["error" => "Database error: " . $e->getMessage()]);
     }
 }
 
@@ -72,6 +72,7 @@ function createProduct($conn) {
         $harga = floatval($data['harga']);
         $stok = isset($data['stok']) ? intval($data['stok']) : 0;
         
+        // Use basic INSERT that works with existing schema (id, nama, harga, stok)
         $stmt = $conn->prepare("INSERT INTO products (id, nama, harga, stok) VALUES (:id, :nama, :harga, :stok)");
         $stmt->bindParam(':id', $id);
         $stmt->bindParam(':nama', $nama);
@@ -82,11 +83,16 @@ function createProduct($conn) {
         echo json_encode([
             "success" => true,
             "message" => "Product created successfully",
-            "data" => ["id" => $id, "nama" => $nama, "harga" => $harga, "stok" => $stok]
+            "data" => [
+                "id" => $id,
+                "nama" => $nama,
+                "harga" => $harga,
+                "stok" => $stok
+            ]
         ]);
     } catch (PDOException $e) {
         http_response_code(500);
-        echo json_encode(["error" => $e->getMessage()]);
+        echo json_encode(["error" => "Database error: " . $e->getMessage()]);
     }
 }
 
@@ -135,7 +141,7 @@ function updateProduct($conn) {
         echo json_encode(["success" => true, "message" => "Product updated successfully"]);
     } catch (PDOException $e) {
         http_response_code(500);
-        echo json_encode(["error" => $e->getMessage()]);
+        echo json_encode(["error" => "Database error: " . $e->getMessage()]);
     }
 }
 
@@ -162,7 +168,7 @@ function deleteProduct($conn) {
         }
     } catch (PDOException $e) {
         http_response_code(500);
-        echo json_encode(["error" => $e->getMessage()]);
+        echo json_encode(["error" => "Database error: " . $e->getMessage()]);
     }
 }
 
