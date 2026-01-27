@@ -19,7 +19,7 @@ try {
     $conn->exec("
         CREATE TABLE IF NOT EXISTS users (
             id VARCHAR(36) PRIMARY KEY,
-            email VARCHAR(255) NOT NULL UNIQUE,
+            email VARCHAR(191) NOT NULL UNIQUE,
             password VARCHAR(255) NOT NULL,
             full_name VARCHAR(255) DEFAULT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -37,7 +37,7 @@ try {
             id VARCHAR(36) PRIMARY KEY,
             user_id VARCHAR(36) NOT NULL,
             token VARCHAR(255) NOT NULL,
-            expires_at TIMESTAMP NOT NULL,
+            expires_at DATETIME NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
@@ -56,7 +56,7 @@ try {
             harga DECIMAL(15, 2) NOT NULL DEFAULT 0,
             stok INT NOT NULL DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            updated_at DATETIME DEFAULT NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     ");
     $results[] = ['table' => 'products', 'status' => 'success', 'message' => 'Created or already exists'];
@@ -75,7 +75,7 @@ try {
             total DECIMAL(15, 2) NOT NULL DEFAULT 0,
             metode_pembayaran VARCHAR(50) NOT NULL DEFAULT 'Tunai',
             product_id VARCHAR(36) DEFAULT NULL,
-            tanggal TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            tanggal DATETIME DEFAULT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     ");
@@ -95,7 +95,7 @@ try {
             date DATE NOT NULL,
             notes TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            updated_at DATETIME DEFAULT NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     ");
     $results[] = ['table' => 'other_expenses', 'status' => 'success', 'message' => 'Created or already exists'];
