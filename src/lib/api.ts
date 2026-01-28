@@ -110,7 +110,7 @@ export const productsApi = {
   getById: (id: string) => apiRequest<any>(`/products?id=${id}`),
   
   create: (data: { nama: string; harga: number; stok?: number }) =>
-    apiRequest<any>('/products', {
+    apiRequest<any>('/products/', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
