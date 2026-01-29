@@ -109,14 +109,14 @@ export const productsApi = {
   
   getById: (id: string) => apiRequest<any>(`/products?id=${id}`),
   
-  create: (data: { nama: string; harga: number; stok?: number }) =>
+  create: (data: { nama: string; harga: number; stok?: number; kode_produk?: string; harga_beli?: number; gambar?: string }) =>
     apiRequest<any>('/products/', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
   
-  update: (data: { id: string; nama?: string; harga?: number; stok?: number }) =>
-    apiRequest<any>('/products', {
+  update: (data: { id: string; nama?: string; harga?: number; stok?: number; kode_produk?: string; harga_beli?: number; gambar?: string }) =>
+    apiRequest<any>('/products/', {
       method: 'PUT',
       body: JSON.stringify(data),
     }),

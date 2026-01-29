@@ -68,14 +68,19 @@ function createProduct($conn) {
         }
         
         $id = generateUUID();
+        $kode_produk = isset($data['kode_produk']) ? trim($data['kode_produk']) : null;
         $nama = trim($data['nama']);
+        $gambar = isset($data['gambar']) ? $data['gambar'] : null;
+        $harga_beli = isset($data['harga_beli']) ? floatval($data['harga_beli']) : 0;
         $harga = floatval($data['harga']);
         $stok = isset($data['stok']) ? intval($data['stok']) : 0;
         
-        // Use basic INSERT that works with existing schema (id, nama, harga, stok)
-        $stmt = $conn->prepare("INSERT INTO products (id, nama, harga, stok) VALUES (:id, :nama, :harga, :stok)");
+        $stmt = $conn->prepare("INSERT INTO products (id, kode_produk, nama, gambar, harga_beli, harga, stok) VALUES (:id, :kode_produk, :nama, :gambar, :harga_beli, :harga, :stok)");
         $stmt->bindParam(':id', $id);
+        $stmt->bindParam(':kode_produk', $kode_produk);
         $stmt->bindParam(':nama', $nama);
+        $stmt->bindParam(':gambar', $gambar);
+        $stmt->bindParam(':harga_beli', $harga_beli);
         $stmt->bindParam(':harga', $harga);
         $stmt->bindParam(':stok', $stok);
         $stmt->execute();
@@ -85,7 +90,10 @@ function createProduct($conn) {
             "message" => "Product created successfully",
             "data" => [
                 "id" => $id,
+                "kode_produk" => $kode_produk,
                 "nama" => $nama,
+                "gambar" => $gambar,
+                "harga_beli" => $harga_beli,
                 "harga" => $harga,
                 "stok" => $stok
             ]
@@ -110,9 +118,21 @@ function updateProduct($conn) {
         $updates = [];
         $params = [':id' => $id];
         
+        if (isset($data['kode_produk'])) {
+            $updates[] = "kode_produk = :kode_produk";
+            $params[':kode_produk'] = trim($data['kode_produk']);
+        }
         if (isset($data['nama'])) {
             $updates[] = "nama = :nama";
             $params[':nama'] = trim($data['nama']);
+        }
+        if (isset($data['gambar'])) {
+            $updates[] = "gambar = :gambar";
+            $params[':gambar'] = $data['gambar'];
+        }
+        if (isset($data['harga_beli'])) {
+            $updates[] = "harga_beli = :harga_beli";
+            $params[':harga_beli'] = floatval($data['harga_beli']);
         }
         if (isset($data['harga'])) {
             $updates[] = "harga = :harga";
