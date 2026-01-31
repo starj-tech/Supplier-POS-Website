@@ -148,8 +148,12 @@ const StokBarang = () => {
     if (!editingProduct) return;
     
     setIsSubmitting(true);
+    // Send ALL fields when updating product
     const result = await updateProduct(editingProduct.id, {
+      kode_produk: formData.kode_produk,
       nama_produk: formData.nama_produk,
+      gambar: formData.gambar,
+      harga_beli: formData.harga_beli,
       harga_jual: formData.harga_jual,
       jumlah_stok: formData.jumlah_stok,
     });

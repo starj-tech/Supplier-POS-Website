@@ -140,9 +140,12 @@ export function useApiProducts() {
     harga_jual: number; 
   }) => {
     console.log('[useApiProducts] Adding product:', data);
-    // Only send basic fields that exist in the database schema
+    // Send ALL fields to backend - field names must match PHP API expectations
     const result = await productsApi.create({
+      kode_produk: data.kode_produk,
       nama: data.nama_produk,
+      gambar: data.gambar,
+      harga_beli: data.harga_beli || 0,
       harga: data.harga_jual,
       stok: data.jumlah_stok,
     });
@@ -165,13 +168,20 @@ export function useApiProducts() {
   }, [fetchProducts, toast]);
 
   const updateProduct = useCallback(async (id: string, data: Partial<{
+    kode_produk: string;
     nama_produk: string;
+    gambar: string;
+    harga_beli: number;
     harga_jual: number;
     jumlah_stok: number;
   }>) => {
+    // Send ALL provided fields to backend
     const result = await productsApi.update({
       id,
+      kode_produk: data.kode_produk,
       nama: data.nama_produk,
+      gambar: data.gambar,
+      harga_beli: data.harga_beli,
       harga: data.harga_jual,
       stok: data.jumlah_stok,
     });

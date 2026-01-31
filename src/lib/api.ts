@@ -122,7 +122,7 @@ export const productsApi = {
     }),
   
   delete: (id: string) =>
-    apiRequest<any>('/products', {
+    apiRequest<any>('/products/', {
       method: 'DELETE',
       body: JSON.stringify({ id }),
     }),
