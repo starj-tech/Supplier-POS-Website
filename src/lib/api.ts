@@ -129,8 +129,9 @@ export const productsApi = {
 };
 
 // Transactions API (protected - requires auth)
+// NOTE: Must use trailing slash for PHP API compatibility
 export const transactionsApi = {
-  getAll: () => apiRequest<any[]>('/transactions'),
+  getAll: () => apiRequest<any[]>('/transactions/'),
   
   create: (data: {
     nama_produk: string;
@@ -139,7 +140,7 @@ export const transactionsApi = {
     metode_pembayaran?: string;
     product_id?: string;
   }) =>
-    apiRequest<any>('/transactions', {
+    apiRequest<any>('/transactions/', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
@@ -151,21 +152,22 @@ export const transactionsApi = {
     harga?: number;
     metode_pembayaran?: string;
   }) =>
-    apiRequest<any>('/transactions', {
+    apiRequest<any>('/transactions/', {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
   
   delete: (id: string) =>
-    apiRequest<any>('/transactions', {
+    apiRequest<any>('/transactions/', {
       method: 'DELETE',
       body: JSON.stringify({ id }),
     }),
 };
 
 // Expenses API (protected - requires auth)
+// NOTE: Must use trailing slash for PHP API compatibility
 export const expensesApi = {
-  getAll: () => apiRequest<any[]>('/expenses'),
+  getAll: () => apiRequest<any[]>('/expenses/'),
   
   create: (data: {
     category: string;
@@ -174,7 +176,7 @@ export const expensesApi = {
     date: string;
     notes?: string;
   }) =>
-    apiRequest<any>('/expenses', {
+    apiRequest<any>('/expenses/', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
@@ -187,13 +189,13 @@ export const expensesApi = {
     date?: string;
     notes?: string;
   }) =>
-    apiRequest<any>('/expenses', {
+    apiRequest<any>('/expenses/', {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
   
   delete: (id: string) =>
-    apiRequest<any>('/expenses', {
+    apiRequest<any>('/expenses/', {
       method: 'DELETE',
       body: JSON.stringify({ id }),
     }),

@@ -44,11 +44,23 @@ interface ApiExpense {
 
 // Transform API product to local format
 function transformApiProduct(apiProduct: ApiProduct) {
+  // Handle image - check if it's a valid base64 or URL
+  let imageUrl = '/placeholder.svg';
+  if (apiProduct.gambar) {
+    // If it's already a data URL or http URL, use it directly
+    if (apiProduct.gambar.startsWith('data:') || apiProduct.gambar.startsWith('http')) {
+      imageUrl = apiProduct.gambar;
+    } else if (apiProduct.gambar.length > 100) {
+      // Assume it's a base64 string without prefix, add it
+      imageUrl = `data:image/jpeg;base64,${apiProduct.gambar}`;
+    }
+  }
+  
   return {
     id: apiProduct.id,
     kode_produk: apiProduct.kode_produk || `PRD-${apiProduct.id.slice(0, 4)}`,
     nama_produk: apiProduct.nama,
-    gambar: apiProduct.gambar || '/placeholder.svg',
+    gambar: imageUrl,
     jumlah_stok: apiProduct.stok || 0,
     harga_beli: apiProduct.harga_beli || Math.floor(apiProduct.harga * 0.7),
     harga_jual: apiProduct.harga,

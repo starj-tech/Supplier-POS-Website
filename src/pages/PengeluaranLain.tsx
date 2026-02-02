@@ -106,10 +106,21 @@ const PengeluaranLain = () => {
   };
 
   const handleSubmit = async () => {
-    if (!keterangan.trim() || !biaya) {
+    // Only require keterangan and biaya > 0
+    if (!keterangan.trim()) {
       toast({
         title: 'Error',
-        description: 'Mohon lengkapi semua field yang wajib diisi.',
+        description: 'Keterangan pengeluaran wajib diisi.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    const biayaValue = parseFloat(biaya);
+    if (!biaya || isNaN(biayaValue) || biayaValue <= 0) {
+      toast({
+        title: 'Error',
+        description: 'Biaya pengeluaran harus lebih dari 0.',
         variant: 'destructive',
       });
       return;
@@ -119,8 +130,8 @@ const PengeluaranLain = () => {
       kategori,
       keterangan: keterangan.trim(),
       tanggal,
-      biaya: parseFloat(biaya),
-      catatan: catatan.trim(),
+      biaya: biayaValue,
+      catatan: catatan.trim() || '', // Catatan is optional, default to empty string
     };
 
     setIsSubmitting(true);
