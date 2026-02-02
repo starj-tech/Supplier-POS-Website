@@ -70,7 +70,51 @@ const StokBarang = () => {
     harga_jual: 0,
   });
 
-  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+  // Compress image to HD quality (max 1920x1080) for database storage
+  const compressImage = (file: File, maxWidth = 1920, maxHeight = 1080, quality = 0.8): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          // Resize proportionally to fit within HD bounds
+          if (width > maxWidth || height > maxHeight) {
+            const widthRatio = maxWidth / width;
+            const heightRatio = maxHeight / height;
+            const ratio = Math.min(widthRatio, heightRatio);
+            width = Math.round(width * ratio);
+            height = Math.round(height * ratio);
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            reject(new Error('Failed to get canvas context'));
+            return;
+          }
+          
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Convert to compressed JPEG
+          const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+          console.log('[compressImage] Original size:', file.size, 'Compressed length:', compressedBase64.length);
+          resolve(compressedBase64);
+        };
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleImageChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (!file.type.startsWith('image/')) {
@@ -82,20 +126,32 @@ const StokBarang = () => {
         return;
       }
       
-      if (file.size > 2 * 1024 * 1024) {
+      // Allow larger files since we'll compress them
+      if (file.size > 10 * 1024 * 1024) {
         toast({
           title: 'Error',
-          description: 'Ukuran gambar maksimal 2MB.',
+          description: 'Ukuran gambar maksimal 10MB.',
           variant: 'destructive',
         });
         return;
       }
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({ ...formData, gambar: reader.result as string });
-      };
-      reader.readAsDataURL(file);
+      try {
+        // Compress image to HD quality (1920x1080, 80% quality)
+        const compressedImage = await compressImage(file, 1920, 1080, 0.8);
+        setFormData({ ...formData, gambar: compressedImage });
+        toast({
+          title: 'Gambar Dipilih',
+          description: 'Gambar telah dioptimalkan ke kualitas HD.',
+        });
+      } catch (error) {
+        console.error('[handleImageChange] Error:', error);
+        toast({
+          title: 'Error',
+          description: 'Gagal memproses gambar. Coba gambar lain.',
+          variant: 'destructive',
+        });
+      }
     }
   };
 
