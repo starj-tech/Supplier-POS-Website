@@ -105,9 +105,9 @@ async function apiRequest<T>(
 // Products API (protected - requires auth)
 // Uses basic schema: id, nama, harga, stok
 export const productsApi = {
-  getAll: () => apiRequest<any[]>('/products'),
+  getAll: () => apiRequest<any[]>('/products/'),
   
-  getById: (id: string) => apiRequest<any>(`/products?id=${id}`),
+  getById: (id: string) => apiRequest<any>(`/products/?id=${id}`),
   
   create: (data: { nama: string; harga: number; stok?: number; kode_produk?: string; harga_beli?: number; gambar?: string }) =>
     apiRequest<any>('/products/', {

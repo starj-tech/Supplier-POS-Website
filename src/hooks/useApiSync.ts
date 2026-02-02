@@ -46,15 +46,22 @@ interface ApiExpense {
 function transformApiProduct(apiProduct: ApiProduct) {
   // Handle image - check if it's a valid base64 or URL
   let imageUrl = '/placeholder.svg';
-  if (apiProduct.gambar) {
-    // If it's already a data URL or http URL, use it directly
-    if (apiProduct.gambar.startsWith('data:') || apiProduct.gambar.startsWith('http')) {
+  
+  // Only process if gambar exists and has meaningful content (more than 50 chars)
+  if (apiProduct.gambar && apiProduct.gambar.length > 50) {
+    if (apiProduct.gambar.startsWith('data:')) {
+      // Already a complete data URL
       imageUrl = apiProduct.gambar;
-    } else if (apiProduct.gambar.length > 100) {
-      // Assume it's a base64 string without prefix, add it
+    } else if (apiProduct.gambar.startsWith('http')) {
+      // HTTP/HTTPS URL
+      imageUrl = apiProduct.gambar;
+    } else {
+      // Assume it's a raw base64 string without prefix
       imageUrl = `data:image/jpeg;base64,${apiProduct.gambar}`;
     }
   }
+  
+  console.log('[transformApiProduct] Product:', apiProduct.nama, 'Image length:', apiProduct.gambar?.length || 0);
   
   return {
     id: apiProduct.id,
@@ -438,13 +445,22 @@ export function useApiExpenses() {
     biaya: number;
     catatan?: string;
   }) => {
-    const result = await expensesApi.create({
+    console.log('[useApiExpenses] Adding expense:', data);
+    
+    // Prepare payload - ensure notes is always a string (empty if not provided)
+    const payload = {
       category: data.kategori,
       description: data.keterangan,
       cost: data.biaya,
       date: data.tanggal.toISOString().split('T')[0],
-      notes: data.catatan,
-    });
+      notes: data.catatan?.trim() || '',
+    };
+    
+    console.log('[useApiExpenses] Payload to API:', payload);
+    
+    const result = await expensesApi.create(payload);
+    
+    console.log('[useApiExpenses] Add result:', result);
     
     if (result.success) {
       await fetchExpenses();

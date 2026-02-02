@@ -137,12 +137,12 @@ const StokBarang = () => {
       }
 
       try {
-        // Compress image to HD quality (1920x1080, 80% quality)
-        const compressedImage = await compressImage(file, 1920, 1080, 0.8);
+        // Compress image to 800x600 with 70% quality (safe for database storage)
+        const compressedImage = await compressImage(file, 800, 600, 0.7);
         setFormData({ ...formData, gambar: compressedImage });
         toast({
           title: 'Gambar Dipilih',
-          description: 'Gambar telah dioptimalkan ke kualitas HD.',
+          description: 'Gambar telah dioptimalkan untuk penyimpanan.',
         });
       } catch (error) {
         console.error('[handleImageChange] Error:', error);
