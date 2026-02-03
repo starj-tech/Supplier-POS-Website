@@ -47,21 +47,29 @@ function transformApiProduct(apiProduct: ApiProduct) {
   // Handle image - check if it's a valid base64 or URL
   let imageUrl = '/placeholder.svg';
   
-  // Only process if gambar exists and has meaningful content (more than 50 chars)
-  if (apiProduct.gambar && apiProduct.gambar.length > 50) {
-    if (apiProduct.gambar.startsWith('data:')) {
+  // Debug logging for image transformation
+  console.log('[transformApiProduct] Input:', {
+    nama: apiProduct.nama,
+    hasGambar: !!apiProduct.gambar,
+    gambarLength: apiProduct.gambar?.length || 0,
+    gambarPrefix: apiProduct.gambar?.substring(0, 50) || 'null'
+  });
+  
+  // Only process if gambar exists and has meaningful content (more than 20 chars)
+  if (apiProduct.gambar && typeof apiProduct.gambar === 'string' && apiProduct.gambar.length > 20) {
+    if (apiProduct.gambar.startsWith('data:image')) {
       // Already a complete data URL
       imageUrl = apiProduct.gambar;
     } else if (apiProduct.gambar.startsWith('http')) {
       // HTTP/HTTPS URL
       imageUrl = apiProduct.gambar;
-    } else {
-      // Assume it's a raw base64 string without prefix
+    } else if (/^[A-Za-z0-9+/=]+$/.test(apiProduct.gambar.substring(0, 100))) {
+      // Valid base64 characters - add prefix
       imageUrl = `data:image/jpeg;base64,${apiProduct.gambar}`;
     }
   }
   
-  console.log('[transformApiProduct] Product:', apiProduct.nama, 'Image length:', apiProduct.gambar?.length || 0);
+  console.log('[transformApiProduct] Output imageUrl length:', imageUrl.length);
   
   return {
     id: apiProduct.id,
