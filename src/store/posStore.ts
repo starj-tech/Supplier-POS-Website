@@ -44,44 +44,8 @@ const generateId = () => Math.random().toString(36).substring(2, 9);
 export const usePOSStore = create<POSStore>()(
   persist(
     (set, get) => ({
-      products: [
-        {
-          id: '1',
-          kode_produk: 'PRD001',
-          nama_produk: 'Indomie Goreng',
-          gambar: '/placeholder.svg',
-          jumlah_stok: 100,
-          harga_beli: 2500,
-          harga_jual: 3500,
-          keuntungan: 1000,
-          created_at: new Date(),
-          updated_at: new Date(),
-        },
-        {
-          id: '2',
-          kode_produk: 'PRD002',
-          nama_produk: 'Aqua 600ml',
-          gambar: '/placeholder.svg',
-          jumlah_stok: 50,
-          harga_beli: 3000,
-          harga_jual: 4000,
-          keuntungan: 1000,
-          created_at: new Date(),
-          updated_at: new Date(),
-        },
-        {
-          id: '3',
-          kode_produk: 'PRD003',
-          nama_produk: 'Teh Botol Sosro',
-          gambar: '/placeholder.svg',
-          jumlah_stok: 30,
-          harga_beli: 4000,
-          harga_jual: 5500,
-          keuntungan: 1500,
-          created_at: new Date(),
-          updated_at: new Date(),
-        },
-      ],
+      // Start with empty arrays - data comes from API
+      products: [],
       transactions: [],
       cart: [],
       otherExpenses: [],
