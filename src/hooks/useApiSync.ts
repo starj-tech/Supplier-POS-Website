@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { productsApi, transactionsApi, expensesApi, getAuthToken } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
+import { normalizeImageUrl, cleanBase64 } from '@/lib/imageUtils';
 
 // Types matching the API response
 interface ApiProduct {
@@ -42,35 +43,16 @@ interface ApiExpense {
   updated_at?: string;
 }
 
-// Transform API product to local format
+// Transform API product to local format using centralized image utilities
 function transformApiProduct(apiProduct: ApiProduct) {
-  // Handle image - check if it's a valid base64 or URL
-  let imageUrl = '/placeholder.svg';
+  const imageUrl = normalizeImageUrl(apiProduct.gambar);
   
-  // Debug logging for image transformation
-  console.log('[transformApiProduct] Input:', {
+  console.log('[transformApiProduct]', {
     nama: apiProduct.nama,
-    hasGambar: !!apiProduct.gambar,
     gambarLength: apiProduct.gambar?.length || 0,
-    gambarPrefix: apiProduct.gambar?.substring(0, 50) || 'null'
+    imageUrlValid: imageUrl !== '/placeholder.svg',
   });
-  
-  // Only process if gambar exists and has meaningful content (more than 20 chars)
-  if (apiProduct.gambar && typeof apiProduct.gambar === 'string' && apiProduct.gambar.length > 20) {
-    if (apiProduct.gambar.startsWith('data:image')) {
-      // Already a complete data URL
-      imageUrl = apiProduct.gambar;
-    } else if (apiProduct.gambar.startsWith('http')) {
-      // HTTP/HTTPS URL
-      imageUrl = apiProduct.gambar;
-    } else if (/^[A-Za-z0-9+/=]+$/.test(apiProduct.gambar.substring(0, 100))) {
-      // Valid base64 characters - add prefix
-      imageUrl = `data:image/jpeg;base64,${apiProduct.gambar}`;
-    }
-  }
-  
-  console.log('[transformApiProduct] Output imageUrl length:', imageUrl.length);
-  
+
   return {
     id: apiProduct.id,
     kode_produk: apiProduct.kode_produk || `PRD-${apiProduct.id.slice(0, 4)}`,
@@ -167,6 +149,7 @@ export function useApiProducts() {
       setLoading(false);
     }
   }, [toast]);
+  
   const addProduct = useCallback(async (data: { 
     kode_produk?: string; 
     nama_produk: string; 
@@ -175,22 +158,40 @@ export function useApiProducts() {
     harga_beli?: number; 
     harga_jual: number; 
   }) => {
+    // Process image - ensure it's properly formatted for storage
+    let processedImage = '';
+    if (data.gambar && data.gambar.length > 20) {
+      // If it's a data URL, extract just the base64 part for storage
+      if (data.gambar.startsWith('data:image')) {
+        // Keep full data URL - backend should store as-is
+        processedImage = data.gambar;
+      } else {
+        // Clean raw base64
+        processedImage = cleanBase64(data.gambar);
+        if (processedImage) {
+          processedImage = `data:image/jpeg;base64,${processedImage}`;
+        }
+      }
+    }
+    
     console.log('[useApiProducts] Adding product:', {
-      ...data,
-      gambar: data.gambar ? `[base64 length: ${data.gambar.length}]` : 'none'
+      nama: data.nama_produk,
+      kode: data.kode_produk,
+      hasImage: !!processedImage,
+      imageLength: processedImage.length,
     });
     
     // Send ALL fields to backend - field names must match PHP API expectations
     const result = await productsApi.create({
       kode_produk: data.kode_produk,
       nama: data.nama_produk,
-      gambar: data.gambar,
+      gambar: processedImage || undefined,
       harga_beli: data.harga_beli || 0,
       harga: data.harga_jual,
       stok: data.jumlah_stok,
     });
     
-    console.log('[useApiProducts] Add result success:', result.success);
+    console.log('[useApiProducts] Add result:', { success: result.success, error: result.error });
     
     if (result.success) {
       console.log('[useApiProducts] Add successful, waiting before refetch...');
@@ -219,18 +220,39 @@ export function useApiProducts() {
     harga_jual: number;
     jumlah_stok: number;
   }>) => {
+    // Process image - ensure it's properly formatted for storage
+    let processedImage = data.gambar;
+    if (data.gambar && data.gambar.length > 20) {
+      if (data.gambar.startsWith('data:image')) {
+        processedImage = data.gambar;
+      } else if (!data.gambar.startsWith('http')) {
+        const cleaned = cleanBase64(data.gambar);
+        if (cleaned) {
+          processedImage = `data:image/jpeg;base64,${cleaned}`;
+        }
+      }
+    }
+    
+    console.log('[useApiProducts] Updating product:', {
+      id,
+      hasImage: !!processedImage,
+      imageLength: processedImage?.length || 0,
+    });
+    
     // Send ALL provided fields to backend
     const result = await productsApi.update({
       id,
       kode_produk: data.kode_produk,
       nama: data.nama_produk,
-      gambar: data.gambar,
+      gambar: processedImage,
       harga_beli: data.harga_beli,
       harga: data.harga_jual,
       stok: data.jumlah_stok,
     });
     
     if (result.success) {
+      // Small delay to ensure database commit completes
+      await new Promise(resolve => setTimeout(resolve, 500));
       await fetchProducts();
       return { success: true };
     } else {
@@ -247,6 +269,8 @@ export function useApiProducts() {
     const result = await productsApi.delete(id);
     
     if (result.success) {
+      // Small delay to ensure database commit completes
+      await new Promise(resolve => setTimeout(resolve, 500));
       await fetchProducts();
       return { success: true };
     } else {

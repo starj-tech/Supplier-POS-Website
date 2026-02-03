@@ -1,8 +1,9 @@
-import { useState, useRef, ChangeEvent, useEffect } from 'react';
+import { useState, useRef, ChangeEvent } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useApiProducts } from '@/hooks/useApiSync';
 import { formatCurrency, formatNumber } from '@/lib/formatCurrency';
 import { exportProductsToExcel } from '@/lib/exportExcel';
+import { compressImageForStorage } from '@/lib/imageUtils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -60,6 +61,7 @@ const StokBarang = () => {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<LocalProduct | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCompressing, setIsCompressing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     kode_produk: '',
@@ -70,88 +72,51 @@ const StokBarang = () => {
     harga_jual: 0,
   });
 
-  // Compress image to HD quality (max 1920x1080) for database storage
-  const compressImage = (file: File, maxWidth = 1920, maxHeight = 1080, quality = 0.8): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-          
-          // Resize proportionally to fit within HD bounds
-          if (width > maxWidth || height > maxHeight) {
-            const widthRatio = maxWidth / width;
-            const heightRatio = maxHeight / height;
-            const ratio = Math.min(widthRatio, heightRatio);
-            width = Math.round(width * ratio);
-            height = Math.round(height * ratio);
-          }
-          
-          canvas.width = width;
-          canvas.height = height;
-          
-          const ctx = canvas.getContext('2d');
-          if (!ctx) {
-            reject(new Error('Failed to get canvas context'));
-            return;
-          }
-          
-          ctx.drawImage(img, 0, 0, width, height);
-          
-          // Convert to compressed JPEG
-          const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
-          console.log('[compressImage] Original size:', file.size, 'Compressed length:', compressedBase64.length);
-          resolve(compressedBase64);
-        };
-        img.onerror = () => reject(new Error('Failed to load image'));
-        img.src = e.target?.result as string;
-      };
-      reader.onerror = () => reject(new Error('Failed to read file'));
-      reader.readAsDataURL(file);
-    });
-  };
-
+  // Handle image selection with compression
   const handleImageChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith('image/')) {
-        toast({
-          title: 'Error',
-          description: 'File harus berupa gambar (JPG, PNG, dll).',
-          variant: 'destructive',
-        });
-        return;
-      }
-      
-      // Allow larger files since we'll compress them
-      if (file.size > 10 * 1024 * 1024) {
-        toast({
-          title: 'Error',
-          description: 'Ukuran gambar maksimal 10MB.',
-          variant: 'destructive',
-        });
-        return;
-      }
+    if (!file) return;
 
-      try {
-        // Compress image to 800x600 with 70% quality (safe for database storage)
-        const compressedImage = await compressImage(file, 800, 600, 0.7);
-        setFormData({ ...formData, gambar: compressedImage });
-        toast({
-          title: 'Gambar Dipilih',
-          description: 'Gambar telah dioptimalkan untuk penyimpanan.',
-        });
-      } catch (error) {
-        console.error('[handleImageChange] Error:', error);
-        toast({
-          title: 'Error',
-          description: 'Gagal memproses gambar. Coba gambar lain.',
-          variant: 'destructive',
-        });
-      }
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: 'Error',
+        description: 'File harus berupa gambar (JPG, PNG, dll).',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Check original file size (max 10MB before compression)
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: 'Error',
+        description: 'Ukuran gambar maksimal 10MB.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsCompressing(true);
+    
+    try {
+      // Use optimized compression utility (400x300, 60% quality)
+      const compressedImage = await compressImageForStorage(file);
+      setFormData({ ...formData, gambar: compressedImage });
+      
+      toast({
+        title: 'Gambar Dipilih',
+        description: 'Gambar telah dioptimalkan untuk penyimpanan.',
+      });
+    } catch (error) {
+      console.error('[handleImageChange] Error:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Gagal memproses gambar.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsCompressing(false);
     }
   };
 
@@ -313,9 +278,19 @@ const StokBarang = () => {
               variant="outline"
               onClick={triggerFileInput}
               className="gap-2"
+              disabled={isCompressing}
             >
-              <Upload className="h-4 w-4" />
-              Pilih Gambar
+              {isCompressing ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Mengompresi...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4" />
+                  Pilih Gambar
+                </>
+              )}
             </Button>
             {formData.gambar && (
               <Button
@@ -324,6 +299,7 @@ const StokBarang = () => {
                 size="sm"
                 onClick={() => setFormData({ ...formData, gambar: '' })}
                 className="text-destructive hover:text-destructive"
+                disabled={isCompressing}
               >
                 Hapus Gambar
               </Button>
@@ -331,7 +307,7 @@ const StokBarang = () => {
           </div>
         </div>
         <p className="text-xs text-muted-foreground">
-          Pilih gambar dari galeri atau file explorer (maks. 2MB)
+          Gambar akan dikompresi otomatis (maks. 10MB, hasil ~500KB)
         </p>
       </div>
       <div className="space-y-2">
