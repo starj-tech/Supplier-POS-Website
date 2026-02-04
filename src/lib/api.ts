@@ -248,3 +248,57 @@ export const settingsApi = {
       body: JSON.stringify(data),
     }),
 };
+
+// Upload API (protected - requires auth)
+// Handles file uploads to the server
+export const uploadApi = {
+  uploadImage: async (file: File): Promise<{ success: boolean; data?: { filename: string; path: string; url: string }; error?: string }> => {
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        return { success: false, error: 'Sesi login telah berakhir. Silakan login kembali.' };
+      }
+
+      const formData = new FormData();
+      formData.append('image', file);
+
+      console.log('[uploadApi] Uploading file:', file.name, 'size:', file.size);
+
+      const response = await fetch(`${API_BASE_URL}/upload/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          // Don't set Content-Type - browser will set it with boundary for FormData
+        },
+        body: formData,
+        mode: 'cors',
+      });
+
+      const responseText = await response.text();
+      console.log('[uploadApi] Response:', responseText);
+
+      let result;
+      try {
+        result = responseText ? JSON.parse(responseText) : {};
+      } catch (parseError) {
+        console.error('[uploadApi] Failed to parse response:', responseText);
+        return { success: false, error: 'Server error: Invalid response' };
+      }
+
+      if (!response.ok) {
+        return { success: false, error: result.error || 'Upload failed' };
+      }
+
+      return { success: true, data: result.data };
+    } catch (error) {
+      console.error('[uploadApi] Error:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Network error' };
+    }
+  },
+
+  deleteImage: (filename: string) =>
+    apiRequest<any>('/upload/', {
+      method: 'DELETE',
+      body: JSON.stringify({ filename }),
+    }),
+};

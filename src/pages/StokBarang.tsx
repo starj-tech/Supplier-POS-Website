@@ -3,7 +3,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { useApiProducts } from '@/hooks/useApiSync';
 import { formatCurrency, formatNumber } from '@/lib/formatCurrency';
 import { exportProductsToExcel } from '@/lib/exportExcel';
-import { compressImageForStorage } from '@/lib/imageUtils';
+import { uploadApi } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -61,7 +61,9 @@ const StokBarang = () => {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<LocalProduct | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isCompressing, setIsCompressing] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     kode_produk: '',
@@ -72,7 +74,7 @@ const StokBarang = () => {
     harga_jual: 0,
   });
 
-  // Handle image selection with compression
+  // Handle image selection - store file for later upload
   const handleImageChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -87,36 +89,38 @@ const StokBarang = () => {
       return;
     }
 
-    // Check original file size (max 10MB before compression)
-    if (file.size > 10 * 1024 * 1024) {
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
       toast({
         title: 'Error',
-        description: 'Ukuran gambar maksimal 10MB.',
+        description: 'Ukuran gambar maksimal 5MB.',
         variant: 'destructive',
       });
       return;
     }
 
-    setIsCompressing(true);
+    // Store the file for later upload
+    setSelectedFile(file);
     
-    try {
-      // Use optimized compression utility (400x300, 60% quality)
-      const compressedImage = await compressImageForStorage(file);
-      setFormData({ ...formData, gambar: compressedImage });
-      
-      toast({
-        title: 'Gambar Dipilih',
-        description: 'Gambar telah dioptimalkan untuk penyimpanan.',
-      });
-    } catch (error) {
-      console.error('[handleImageChange] Error:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Gagal memproses gambar.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsCompressing(false);
+    // Create preview URL
+    const preview = URL.createObjectURL(file);
+    setPreviewUrl(preview);
+    
+    toast({
+      title: 'Gambar Dipilih',
+      description: `File: ${file.name} (${(file.size / 1024).toFixed(1)}KB)`,
+    });
+  };
+
+  const clearImage = () => {
+    setSelectedFile(null);
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    setPreviewUrl('');
+    setFormData({ ...formData, gambar: '' });
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -139,6 +143,7 @@ const StokBarang = () => {
       harga_beli: 0,
       harga_jual: 0,
     });
+    clearImage();
   };
 
   const handleAdd = async () => {
@@ -152,7 +157,29 @@ const StokBarang = () => {
     }
     
     setIsSubmitting(true);
-    const result = await addProduct(formData);
+    
+    // Upload image first if file is selected
+    let imageUrl = formData.gambar;
+    if (selectedFile) {
+      setIsUploading(true);
+      const uploadResult = await uploadApi.uploadImage(selectedFile);
+      setIsUploading(false);
+      
+      if (uploadResult.success && uploadResult.data) {
+        imageUrl = uploadResult.data.url;
+        console.log('[handleAdd] Image uploaded:', imageUrl);
+      } else {
+        toast({
+          title: 'Error',
+          description: uploadResult.error || 'Gagal mengupload gambar',
+          variant: 'destructive',
+        });
+        setIsSubmitting(false);
+        return;
+      }
+    }
+    
+    const result = await addProduct({ ...formData, gambar: imageUrl });
     setIsSubmitting(false);
     
     if (result.success) {
@@ -169,11 +196,33 @@ const StokBarang = () => {
     if (!editingProduct) return;
     
     setIsSubmitting(true);
+    
+    // Upload image first if new file is selected
+    let imageUrl = formData.gambar;
+    if (selectedFile) {
+      setIsUploading(true);
+      const uploadResult = await uploadApi.uploadImage(selectedFile);
+      setIsUploading(false);
+      
+      if (uploadResult.success && uploadResult.data) {
+        imageUrl = uploadResult.data.url;
+        console.log('[handleEdit] Image uploaded:', imageUrl);
+      } else {
+        toast({
+          title: 'Error',
+          description: uploadResult.error || 'Gagal mengupload gambar',
+          variant: 'destructive',
+        });
+        setIsSubmitting(false);
+        return;
+      }
+    }
+    
     // Send ALL fields when updating product
     const result = await updateProduct(editingProduct.id, {
       kode_produk: formData.kode_produk,
       nama_produk: formData.nama_produk,
-      gambar: formData.gambar,
+      gambar: imageUrl,
       harga_beli: formData.harga_beli,
       harga_jual: formData.harga_jual,
       jumlah_stok: formData.jumlah_stok,
@@ -202,6 +251,8 @@ const StokBarang = () => {
 
   const openEditDialog = (product: LocalProduct) => {
     setEditingProduct(product);
+    setSelectedFile(null);
+    setPreviewUrl('');
     setFormData({
       kode_produk: product.kode_produk,
       nama_produk: product.nama_produk,
@@ -252,9 +303,9 @@ const StokBarang = () => {
         <Label>Gambar Produk</Label>
         <div className="flex gap-3 items-center">
           <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-lg border border-border bg-secondary">
-            {formData.gambar ? (
+            {(previewUrl || formData.gambar) ? (
               <img
-                src={formData.gambar}
+                src={previewUrl || formData.gambar}
                 alt="Preview"
                 className="h-full w-full object-cover"
                 onError={(e) => {
@@ -278,12 +329,12 @@ const StokBarang = () => {
               variant="outline"
               onClick={triggerFileInput}
               className="gap-2"
-              disabled={isCompressing}
+              disabled={isUploading || isSubmitting}
             >
-              {isCompressing ? (
+              {isUploading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Mengompresi...
+                  Mengupload...
                 </>
               ) : (
                 <>
@@ -292,14 +343,14 @@ const StokBarang = () => {
                 </>
               )}
             </Button>
-            {formData.gambar && (
+            {(previewUrl || formData.gambar) && (
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                onClick={() => setFormData({ ...formData, gambar: '' })}
+                onClick={clearImage}
                 className="text-destructive hover:text-destructive"
-                disabled={isCompressing}
+                disabled={isUploading || isSubmitting}
               >
                 Hapus Gambar
               </Button>
@@ -307,7 +358,7 @@ const StokBarang = () => {
           </div>
         </div>
         <p className="text-xs text-muted-foreground">
-          Gambar akan dikompresi otomatis (maks. 10MB, hasil ~500KB)
+          Gambar akan diupload ke server (maks. 5MB)
         </p>
       </div>
       <div className="space-y-2">

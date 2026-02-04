@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { productsApi, transactionsApi, expensesApi, getAuthToken } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
-import { normalizeImageUrl, cleanBase64 } from '@/lib/imageUtils';
+import { normalizeImageUrl } from '@/lib/imageUtils';
 
 // Types matching the API response
 interface ApiProduct {
@@ -43,12 +43,35 @@ interface ApiExpense {
   updated_at?: string;
 }
 
+// Helper to safely parse numbers from API (handles strings and floats)
+function safeParseNumber(value: any, defaultValue: number = 0): number {
+  if (value === null || value === undefined || value === '') {
+    return defaultValue;
+  }
+  // If it's already a number, round it to avoid floating point issues
+  if (typeof value === 'number') {
+    return Math.round(value);
+  }
+  // Parse string to number, handling both comma and dot as decimal separator
+  const parsed = parseFloat(String(value).replace(',', '.'));
+  return isNaN(parsed) ? defaultValue : Math.round(parsed);
+}
+
 // Transform API product to local format using centralized image utilities
 function transformApiProduct(apiProduct: ApiProduct) {
   const imageUrl = normalizeImageUrl(apiProduct.gambar);
   
+  // Parse numbers safely - ensure they're integers
+  const hargaJual = safeParseNumber(apiProduct.harga, 0);
+  const hargaBeli = safeParseNumber(apiProduct.harga_beli, Math.floor(hargaJual * 0.7));
+  const stok = safeParseNumber(apiProduct.stok, 0);
+  
   console.log('[transformApiProduct]', {
     nama: apiProduct.nama,
+    rawHarga: apiProduct.harga,
+    rawHargaBeli: apiProduct.harga_beli,
+    parsedHargaJual: hargaJual,
+    parsedHargaBeli: hargaBeli,
     gambarLength: apiProduct.gambar?.length || 0,
     imageUrlValid: imageUrl !== '/placeholder.svg',
   });
@@ -58,10 +81,10 @@ function transformApiProduct(apiProduct: ApiProduct) {
     kode_produk: apiProduct.kode_produk || `PRD-${apiProduct.id.slice(0, 4)}`,
     nama_produk: apiProduct.nama,
     gambar: imageUrl,
-    jumlah_stok: apiProduct.stok || 0,
-    harga_beli: apiProduct.harga_beli || Math.floor(apiProduct.harga * 0.7),
-    harga_jual: apiProduct.harga,
-    keuntungan: apiProduct.harga - (apiProduct.harga_beli || Math.floor(apiProduct.harga * 0.7)),
+    jumlah_stok: stok,
+    harga_beli: hargaBeli,
+    harga_jual: hargaJual,
+    keuntungan: hargaJual - hargaBeli,
     created_at: apiProduct.created_at ? new Date(apiProduct.created_at) : new Date(),
     updated_at: apiProduct.updated_at ? new Date(apiProduct.updated_at) : new Date(),
   };
@@ -84,12 +107,15 @@ function transformApiTransaction(apiTransaction: ApiTransaction, index: number) 
 
 // Transform API expense to local format
 function transformApiExpense(apiExpense: ApiExpense) {
+  // Parse cost safely to ensure it's a proper number
+  const biaya = safeParseNumber(apiExpense.cost, 0);
+  
   return {
     id: apiExpense.id,
     kategori: apiExpense.category as 'Biaya Packing' | 'Iklan' | 'Bensin' | 'Tip Kurir' | 'Gaji Karyawan',
     keterangan: apiExpense.description || apiExpense.category,
     tanggal: new Date(apiExpense.date),
-    biaya: apiExpense.cost,
+    biaya: biaya,
     catatan: apiExpense.notes || '',
     created_at: apiExpense.created_at ? new Date(apiExpense.created_at) : new Date(),
     updated_at: apiExpense.updated_at ? new Date(apiExpense.updated_at) : new Date(),
@@ -158,34 +184,21 @@ export function useApiProducts() {
     harga_beli?: number; 
     harga_jual: number; 
   }) => {
-    // Process image - ensure it's properly formatted for storage
-    let processedImage = '';
-    if (data.gambar && data.gambar.length > 20) {
-      // If it's a data URL, extract just the base64 part for storage
-      if (data.gambar.startsWith('data:image')) {
-        // Keep full data URL - backend should store as-is
-        processedImage = data.gambar;
-      } else {
-        // Clean raw base64
-        processedImage = cleanBase64(data.gambar);
-        if (processedImage) {
-          processedImage = `data:image/jpeg;base64,${processedImage}`;
-        }
-      }
-    }
+    // Image is now handled as URL (uploaded to server) or kept as-is
+    const imageUrl = data.gambar || '';
     
     console.log('[useApiProducts] Adding product:', {
       nama: data.nama_produk,
       kode: data.kode_produk,
-      hasImage: !!processedImage,
-      imageLength: processedImage.length,
+      hasImage: !!imageUrl,
+      imageIsUrl: imageUrl.startsWith('http'),
     });
     
     // Send ALL fields to backend - field names must match PHP API expectations
     const result = await productsApi.create({
       kode_produk: data.kode_produk,
       nama: data.nama_produk,
-      gambar: processedImage || undefined,
+      gambar: imageUrl || undefined,
       harga_beli: data.harga_beli || 0,
       harga: data.harga_jual,
       stok: data.jumlah_stok,
@@ -220,23 +233,13 @@ export function useApiProducts() {
     harga_jual: number;
     jumlah_stok: number;
   }>) => {
-    // Process image - ensure it's properly formatted for storage
-    let processedImage = data.gambar;
-    if (data.gambar && data.gambar.length > 20) {
-      if (data.gambar.startsWith('data:image')) {
-        processedImage = data.gambar;
-      } else if (!data.gambar.startsWith('http')) {
-        const cleaned = cleanBase64(data.gambar);
-        if (cleaned) {
-          processedImage = `data:image/jpeg;base64,${cleaned}`;
-        }
-      }
-    }
+    // Image is now handled as URL (uploaded to server) or kept as-is
+    const imageUrl = data.gambar || '';
     
     console.log('[useApiProducts] Updating product:', {
       id,
-      hasImage: !!processedImage,
-      imageLength: processedImage?.length || 0,
+      hasImage: !!imageUrl,
+      imageIsUrl: imageUrl.startsWith('http'),
     });
     
     // Send ALL provided fields to backend
@@ -244,7 +247,7 @@ export function useApiProducts() {
       id,
       kode_produk: data.kode_produk,
       nama: data.nama_produk,
-      gambar: processedImage,
+      gambar: imageUrl || undefined,
       harga_beli: data.harga_beli,
       harga: data.harga_jual,
       stok: data.jumlah_stok,
