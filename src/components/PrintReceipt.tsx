@@ -7,7 +7,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { formatCurrency, formatNumber } from '@/lib/formatCurrency';
-import { Printer, X } from 'lucide-react';
+import { Printer } from 'lucide-react';
 import { CartItem, PaymentMethod } from '@/types/pos';
 import { usePOSStore } from '@/store/posStore';
 
@@ -175,12 +175,7 @@ export function PrintReceipt({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            <span>Struk Transaksi</span>
-            <Button variant="ghost" size="icon" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
-          </DialogTitle>
+          <DialogTitle>Struk Transaksi</DialogTitle>
         </DialogHeader>
 
         <div className="rounded-lg border border-border bg-card p-4">

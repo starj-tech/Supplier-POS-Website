@@ -127,7 +127,15 @@ const RiwayatTransaksi = () => {
     }
   };
 
-  const totalTransaksi = transactions.reduce((sum, t) => sum + t.total, 0);
+  // Helper to safely get numeric value
+  const safeNumber = (val: any): number => {
+    if (typeof val === 'number' && isFinite(val) && !isNaN(val)) {
+      return val;
+    }
+    return 0;
+  };
+
+  const totalTransaksi = transactions.reduce((sum, t) => sum + safeNumber(t.total), 0);
 
   return (
     <MainLayout>

@@ -115,36 +115,47 @@ const Dashboard = () => {
     return { filteredTransactions, filteredExpenses };
   }, [transactions, otherExpenses, filterType, selectedDate, startDate, endDate]);
 
+  // Helper to safely get numeric value
+  const safeNumber = (val: any): number => {
+    if (typeof val === 'number' && isFinite(val) && !isNaN(val)) {
+      return val;
+    }
+    return 0;
+  };
+
   // Calculate statistics based on filtered data
   const totalPembelian = products.reduce(
-    (sum, p) => sum + p.harga_beli * p.jumlah_stok,
+    (sum, p) => sum + safeNumber(p.harga_beli) * safeNumber(p.jumlah_stok),
     0
   );
   
   // Calculate total sales with safe number handling
   const totalPenjualan = filteredData.filteredTransactions.reduce((sum, t) => {
-    const total = typeof t.total === 'number' && !isNaN(t.total) ? t.total : 0;
+    const total = safeNumber(t.total);
     return sum + total;
   }, 0);
   
   // Calculate profit - try to match by product_id first, then by product name
   const totalKeuntungan = filteredData.filteredTransactions.reduce((sum, t) => {
+    const qty = safeNumber(t.qty) || 1;
+    const transactionTotal = safeNumber(t.total);
+    
     // Try to find product by ID first
     let product = products.find((p) => p.id === t.product_id);
     
     // If not found by ID, try to find by product name (case-insensitive)
-    if (!product) {
+    if (!product && t.nama_produk) {
       product = products.find((p) => 
         p.nama_produk.toLowerCase() === t.nama_produk.toLowerCase()
       );
     }
     
-    if (product && product.keuntungan > 0) {
-      return sum + product.keuntungan * t.qty;
+    if (product && safeNumber(product.keuntungan) > 0) {
+      return sum + safeNumber(product.keuntungan) * qty;
     }
     
     // Fallback: estimate profit as 30% of transaction total
-    const estimatedProfit = Math.round(t.total * 0.3);
+    const estimatedProfit = Math.round(transactionTotal * 0.3);
     return sum + estimatedProfit;
   }, 0);
   

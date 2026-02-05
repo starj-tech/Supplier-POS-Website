@@ -139,21 +139,38 @@ function transformApiProduct(apiProduct: ApiProduct) {
 
 // Transform API transaction to local format
 function transformApiTransaction(apiTransaction: ApiTransaction, index: number) {
-  // Safely parse numeric values
+  // Safely parse numeric values - ensure they're always valid numbers
   const qty = safeParseNumber(apiTransaction.qty, 1);
   const harga = safeParseNumber(apiTransaction.harga, 0);
-  const total = safeParseNumber(apiTransaction.total, qty * harga);
   
-  // Handle payment method - check multiple possible field names
-  const paymentMethod = apiTransaction.metode_pembayaran || 
-                        apiTransaction.payment_method || 
-                        'Tunai';
+  // Calculate total - prioritize API value, fallback to calculation
+  let total = safeParseNumber(apiTransaction.total, 0);
+  if (total === 0 || isNaN(total)) {
+    total = qty * harga;
+  }
+  
+  // Ensure total is never NaN
+  if (isNaN(total) || !isFinite(total)) {
+    total = 0;
+  }
+  
+  // Handle payment method - check multiple possible field names and clean the value
+  let rawPaymentMethod = apiTransaction.metode_pembayaran || 
+                         apiTransaction.payment_method || 
+                         '';
+  
+  // Clean the payment method string
+  if (typeof rawPaymentMethod === 'string') {
+    rawPaymentMethod = rawPaymentMethod.trim();
+  }
   
   // Validate payment method is one of the expected values
   const validMethods = ['Tunai', 'Shopee', 'Tokopedia'];
-  const normalizedMethod = validMethods.includes(paymentMethod) 
-    ? paymentMethod as 'Tunai' | 'Shopee' | 'Tokopedia'
-    : 'Tunai';
+  let normalizedMethod: 'Tunai' | 'Shopee' | 'Tokopedia' = 'Tunai';
+  
+  if (rawPaymentMethod && validMethods.includes(rawPaymentMethod)) {
+    normalizedMethod = rawPaymentMethod as 'Tunai' | 'Shopee' | 'Tokopedia';
+  }
   
   console.log('[transformApiTransaction]', {
     id: apiTransaction.id,
@@ -171,11 +188,11 @@ function transformApiTransaction(apiTransaction: ApiTransaction, index: number) 
     id: apiTransaction.id,
     no: apiTransaction.no || index + 1,
     tanggal: apiTransaction.tanggal ? new Date(apiTransaction.tanggal) : new Date(apiTransaction.created_at || new Date()),
-    nama_produk: apiTransaction.nama_produk,
+    nama_produk: apiTransaction.nama_produk || 'Produk Tidak Diketahui',
     product_id: apiTransaction.product_id,
-    qty,
-    harga,
-    total,
+    qty: isNaN(qty) ? 1 : qty,
+    harga: isNaN(harga) ? 0 : harga,
+    total: isNaN(total) ? 0 : total,
     metode_pembayaran: normalizedMethod,
   };
 }
