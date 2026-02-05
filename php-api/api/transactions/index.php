@@ -32,9 +32,39 @@ switch ($method) {
 
 function getTransactions($conn) {
     try {
-        $stmt = $conn->query("SELECT * FROM transactions ORDER BY tanggal DESC");
+        // Use COALESCE to provide default values for potentially NULL fields
+        $stmt = $conn->query("
+            SELECT 
+                id,
+                nama_produk,
+                qty,
+                harga,
+                COALESCE(total, qty * harga) as total,
+                COALESCE(metode_pembayaran, 'Tunai') as metode_pembayaran,
+                product_id,
+                tanggal,
+                created_at
+            FROM transactions 
+            ORDER BY tanggal DESC
+        ");
         $transactions = $stmt->fetchAll();
-        echo json_encode(["success" => true, "data" => $transactions]);
+        
+        // Ensure all numeric values are properly formatted
+        $formattedTransactions = array_map(function($t) {
+            return [
+                'id' => $t['id'],
+                'nama_produk' => $t['nama_produk'],
+                'qty' => intval($t['qty']),
+                'harga' => floatval($t['harga']),
+                'total' => floatval($t['total']),
+                'metode_pembayaran' => $t['metode_pembayaran'] ?: 'Tunai',
+                'product_id' => $t['product_id'],
+                'tanggal' => $t['tanggal'],
+                'created_at' => $t['created_at']
+            ];
+        }, $transactions);
+        
+        echo json_encode(["success" => true, "data" => $formattedTransactions]);
     } catch (PDOException $e) {
         http_response_code(500);
         echo json_encode(["error" => "Database error: " . $e->getMessage()]);

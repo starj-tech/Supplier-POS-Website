@@ -49,13 +49,59 @@ function safeParseNumber(value: any, defaultValue: number = 0): number {
   if (value === null || value === undefined || value === '') {
     return defaultValue;
   }
-  // If it's already a number, round it to avoid floating point issues
+  
+  // If it's already a valid number, use it
   if (typeof value === 'number') {
+    if (isNaN(value) || !isFinite(value)) {
+      return defaultValue;
+    }
     return Math.round(value);
   }
-  // Parse string to number, handling both comma and dot as decimal separator
-  const parsed = parseFloat(String(value).replace(',', '.'));
-  return isNaN(parsed) ? defaultValue : Math.round(parsed);
+  
+  // Convert to string and clean up
+  let strValue = String(value).trim();
+  
+  // Remove any currency symbols and whitespace
+  strValue = strValue.replace(/[Rp\s]/gi, '');
+  
+  // Handle different number formats
+  // Format: 195.000 (Indonesian thousands separator) or 195,000 (US thousands)
+  // Format: 195.50 or 195,50 (decimals)
+  
+  // If it has multiple dots or commas, treat first as thousands separator
+  const dotCount = (strValue.match(/\./g) || []).length;
+  const commaCount = (strValue.match(/,/g) || []).length;
+  
+  if (dotCount > 1) {
+    // Multiple dots = thousands separator (e.g., 1.000.000)
+    strValue = strValue.replace(/\./g, '');
+  } else if (commaCount > 1) {
+    // Multiple commas = thousands separator
+    strValue = strValue.replace(/,/g, '');
+  } else if (dotCount === 1 && commaCount === 1) {
+    // Both present - comma is likely thousands separator (e.g., 1,000.50)
+    strValue = strValue.replace(/,/g, '');
+  } else if (commaCount === 1) {
+    // Single comma - could be decimal separator (Indonesian: 195,50) or thousands (US: 1,000)
+    const afterComma = strValue.split(',')[1];
+    if (afterComma && afterComma.length === 3 && !afterComma.includes('.')) {
+      // Likely thousands separator (e.g., 1,000)
+      strValue = strValue.replace(/,/g, '');
+    } else {
+      // Likely decimal separator (e.g., 195,50)
+      strValue = strValue.replace(',', '.');
+    }
+  }
+  // Single dot is kept as decimal separator (standard)
+  
+  const parsed = parseFloat(strValue);
+  
+  if (isNaN(parsed) || !isFinite(parsed)) {
+    console.warn('[safeParseNumber] Failed to parse:', value, '-> using default:', defaultValue);
+    return defaultValue;
+  }
+  
+  return Math.round(parsed);
 }
 
 // Transform API product to local format using centralized image utilities
