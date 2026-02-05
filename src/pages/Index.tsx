@@ -123,22 +123,30 @@ const Dashboard = () => {
     return 0;
   };
 
+  // Get transaction total with fallback calculation
+  const getTransactionTotal = (t: any): number => {
+    const storedTotal = safeNumber(t.total);
+    if (storedTotal > 0) return storedTotal;
+    // Fallback: calculate from qty * harga
+    return safeNumber(t.qty) * safeNumber(t.harga);
+  };
+
   // Calculate statistics based on filtered data
   const totalPembelian = products.reduce(
     (sum, p) => sum + safeNumber(p.harga_beli) * safeNumber(p.jumlah_stok),
     0
   );
   
-  // Calculate total sales with safe number handling
+  // Calculate total sales with safe number handling and fallback
   const totalPenjualan = filteredData.filteredTransactions.reduce((sum, t) => {
-    const total = safeNumber(t.total);
+    const total = getTransactionTotal(t);
     return sum + total;
   }, 0);
   
   // Calculate profit - try to match by product_id first, then by product name
   const totalKeuntungan = filteredData.filteredTransactions.reduce((sum, t) => {
     const qty = safeNumber(t.qty) || 1;
-    const transactionTotal = safeNumber(t.total);
+    const transactionTotal = getTransactionTotal(t);
     
     // Try to find product by ID first
     let product = products.find((p) => p.id === t.product_id);

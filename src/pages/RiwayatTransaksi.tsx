@@ -127,7 +127,7 @@ const RiwayatTransaksi = () => {
     }
   };
 
-  // Helper to safely get numeric value
+  // Helper to safely get numeric value with fallback calculation
   const safeNumber = (val: any): number => {
     if (typeof val === 'number' && isFinite(val) && !isNaN(val)) {
       return val;
@@ -135,7 +135,20 @@ const RiwayatTransaksi = () => {
     return 0;
   };
 
-  const totalTransaksi = transactions.reduce((sum, t) => sum + safeNumber(t.total), 0);
+  // Get display total - use calculated if stored is invalid
+  const getDisplayTotal = (t: LocalTransaction): number => {
+    const storedTotal = safeNumber(t.total);
+    if (storedTotal > 0) return storedTotal;
+    // Fallback: calculate from qty * harga
+    return safeNumber(t.qty) * safeNumber(t.harga);
+  };
+
+  // Get display payment method - default to Tunai if empty
+  const getDisplayPaymentMethod = (t: LocalTransaction): string => {
+    return t.metode_pembayaran || 'Tunai';
+  };
+
+  const totalTransaksi = transactions.reduce((sum, t) => sum + getDisplayTotal(t), 0);
 
   return (
     <MainLayout>
@@ -252,17 +265,17 @@ const RiwayatTransaksi = () => {
                           {formatCurrency(transaction.harga)}
                         </TableCell>
                         <TableCell className="text-right font-semibold text-success">
-                          {formatCurrency(transaction.total)}
+                          {formatCurrency(getDisplayTotal(transaction))}
                         </TableCell>
                         <TableCell>
                           <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                            transaction.metode_pembayaran === 'Tunai' 
+                            getDisplayPaymentMethod(transaction) === 'Tunai' 
                               ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400'
-                              : transaction.metode_pembayaran === 'Shopee'
+                              : getDisplayPaymentMethod(transaction) === 'Shopee'
                               ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400'
                               : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
                           }`}>
-                            {transaction.metode_pembayaran}
+                            {getDisplayPaymentMethod(transaction)}
                           </span>
                         </TableCell>
                         <TableCell>

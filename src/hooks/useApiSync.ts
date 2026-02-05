@@ -139,22 +139,28 @@ function transformApiProduct(apiProduct: ApiProduct) {
 
 // Transform API transaction to local format
 function transformApiTransaction(apiTransaction: ApiTransaction, index: number) {
+  console.log('[transformApiTransaction] Raw API data:', JSON.stringify(apiTransaction));
+  
   // Safely parse numeric values - ensure they're always valid numbers
   const qty = safeParseNumber(apiTransaction.qty, 1);
   const harga = safeParseNumber(apiTransaction.harga, 0);
   
-  // Calculate total - prioritize API value, fallback to calculation
+  // Calculate total - ALWAYS recalculate if API value is 0, NaN, or suspicious
   let total = safeParseNumber(apiTransaction.total, 0);
-  if (total === 0 || isNaN(total)) {
-    total = qty * harga;
+  const calculatedTotal = qty * harga;
+  
+  // Use calculated total if API total is invalid or zero
+  if (total === 0 || !isFinite(total) || isNaN(total)) {
+    console.log('[transformApiTransaction] Using calculated total:', calculatedTotal, 'instead of API total:', total);
+    total = calculatedTotal;
   }
   
-  // Ensure total is never NaN
-  if (isNaN(total) || !isFinite(total)) {
+  // Final safety check
+  if (!isFinite(total) || isNaN(total)) {
     total = 0;
   }
   
-  // Handle payment method - check multiple possible field names and clean the value
+  // Handle payment method - check multiple possible field names
   let rawPaymentMethod = apiTransaction.metode_pembayaran || 
                          apiTransaction.payment_method || 
                          '';
@@ -162,39 +168,44 @@ function transformApiTransaction(apiTransaction: ApiTransaction, index: number) 
   // Clean the payment method string
   if (typeof rawPaymentMethod === 'string') {
     rawPaymentMethod = rawPaymentMethod.trim();
+  } else {
+    rawPaymentMethod = '';
   }
   
-  // Validate payment method is one of the expected values
-  const validMethods = ['Tunai', 'Shopee', 'Tokopedia'];
+  // Normalize payment method with case-insensitive matching
   let normalizedMethod: 'Tunai' | 'Shopee' | 'Tokopedia' = 'Tunai';
   
-  if (rawPaymentMethod && validMethods.includes(rawPaymentMethod)) {
-    normalizedMethod = rawPaymentMethod as 'Tunai' | 'Shopee' | 'Tokopedia';
+  if (rawPaymentMethod) {
+    const lowerMethod = rawPaymentMethod.toLowerCase();
+    if (lowerMethod === 'tunai' || lowerMethod === 'cash') {
+      normalizedMethod = 'Tunai';
+    } else if (lowerMethod === 'shopee') {
+      normalizedMethod = 'Shopee';
+    } else if (lowerMethod === 'tokopedia' || lowerMethod === 'tokped') {
+      normalizedMethod = 'Tokopedia';
+    } else {
+      // Keep original if it matches exactly
+      if (['Tunai', 'Shopee', 'Tokopedia'].includes(rawPaymentMethod)) {
+        normalizedMethod = rawPaymentMethod as 'Tunai' | 'Shopee' | 'Tokopedia';
+      }
+    }
   }
   
-  console.log('[transformApiTransaction]', {
-    id: apiTransaction.id,
-    rawQty: apiTransaction.qty,
-    rawHarga: apiTransaction.harga,
-    rawTotal: apiTransaction.total,
-    rawMetode: apiTransaction.metode_pembayaran,
-    parsedQty: qty,
-    parsedHarga: harga,
-    parsedTotal: total,
-    normalizedMethod,
-  });
-  
-  return {
+  const result = {
     id: apiTransaction.id,
     no: apiTransaction.no || index + 1,
     tanggal: apiTransaction.tanggal ? new Date(apiTransaction.tanggal) : new Date(apiTransaction.created_at || new Date()),
     nama_produk: apiTransaction.nama_produk || 'Produk Tidak Diketahui',
     product_id: apiTransaction.product_id,
-    qty: isNaN(qty) ? 1 : qty,
-    harga: isNaN(harga) ? 0 : harga,
-    total: isNaN(total) ? 0 : total,
+    qty: isFinite(qty) && !isNaN(qty) ? qty : 1,
+    harga: isFinite(harga) && !isNaN(harga) ? harga : 0,
+    total: isFinite(total) && !isNaN(total) ? total : 0,
     metode_pembayaran: normalizedMethod,
   };
+  
+  console.log('[transformApiTransaction] Transformed result:', JSON.stringify(result));
+  
+  return result;
 }
 
 // Transform API expense to local format
