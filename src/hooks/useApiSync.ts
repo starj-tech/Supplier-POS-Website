@@ -23,10 +23,11 @@ interface ApiTransaction {
   id: string;
   no?: number;
   nama_produk: string;
-  qty: number;
-  harga: number;
-  total: number;
-  metode_pembayaran: string;
+  qty: number | string;
+  harga: number | string;
+  total: number | string;
+  metode_pembayaran?: string;
+  payment_method?: string; // Alternative field name from API
   product_id?: string;
   tanggal?: string;
   created_at?: string;
@@ -92,16 +93,44 @@ function transformApiProduct(apiProduct: ApiProduct) {
 
 // Transform API transaction to local format
 function transformApiTransaction(apiTransaction: ApiTransaction, index: number) {
+  // Safely parse numeric values
+  const qty = safeParseNumber(apiTransaction.qty, 1);
+  const harga = safeParseNumber(apiTransaction.harga, 0);
+  const total = safeParseNumber(apiTransaction.total, qty * harga);
+  
+  // Handle payment method - check multiple possible field names
+  const paymentMethod = apiTransaction.metode_pembayaran || 
+                        apiTransaction.payment_method || 
+                        'Tunai';
+  
+  // Validate payment method is one of the expected values
+  const validMethods = ['Tunai', 'Shopee', 'Tokopedia'];
+  const normalizedMethod = validMethods.includes(paymentMethod) 
+    ? paymentMethod as 'Tunai' | 'Shopee' | 'Tokopedia'
+    : 'Tunai';
+  
+  console.log('[transformApiTransaction]', {
+    id: apiTransaction.id,
+    rawQty: apiTransaction.qty,
+    rawHarga: apiTransaction.harga,
+    rawTotal: apiTransaction.total,
+    rawMetode: apiTransaction.metode_pembayaran,
+    parsedQty: qty,
+    parsedHarga: harga,
+    parsedTotal: total,
+    normalizedMethod,
+  });
+  
   return {
     id: apiTransaction.id,
     no: apiTransaction.no || index + 1,
     tanggal: apiTransaction.tanggal ? new Date(apiTransaction.tanggal) : new Date(apiTransaction.created_at || new Date()),
     nama_produk: apiTransaction.nama_produk,
     product_id: apiTransaction.product_id,
-    qty: apiTransaction.qty,
-    harga: apiTransaction.harga,
-    total: apiTransaction.total,
-    metode_pembayaran: apiTransaction.metode_pembayaran as 'Tunai' | 'Shopee' | 'Tokopedia',
+    qty,
+    harga,
+    total,
+    metode_pembayaran: normalizedMethod,
   };
 }
 
