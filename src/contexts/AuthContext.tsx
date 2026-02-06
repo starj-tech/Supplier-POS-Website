@@ -40,33 +40,27 @@ function saveCurrentUser(user: AuthUser | null): void {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  // Initialize user from localStorage immediately to prevent flash
   const [user, setUser] = useState<AuthUser | null>(() => {
     const token = getAuthToken();
     const savedUser = getCurrentUser();
-    // Only use saved user if we also have a token
     return token && savedUser ? savedUser : null;
   });
   
-  // Start with loading=false if we already have user data from localStorage
   const [loading, setLoading] = useState(() => {
     const token = getAuthToken();
     const savedUser = getCurrentUser();
-    // If we have both token and user, don't show loading
     return !(token && savedUser);
   });
   
   const [verificationDone, setVerificationDone] = useState(false);
 
   useEffect(() => {
-    // Skip if already verified this session
     if (verificationDone) return;
     
     const verifySession = async () => {
       const token = getAuthToken();
       const currentUser = getCurrentUser();
       
-      // If no token or no saved user, definitely not logged in
       if (!token || !currentUser) {
         setUser(null);
         setLoading(false);
@@ -74,12 +68,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // We have local session, verify it in background (don't block UI)
       try {
         const result = await authApi.verifyToken();
         
         if (result.success && result.data) {
-          // Token still valid, update user data if changed
           const verifiedUser: AuthUser = {
             id: result.data.id,
             email: result.data.email,
@@ -88,10 +80,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           saveCurrentUser(verifiedUser);
           setUser(verifiedUser);
         } else if (result.error) {
-          // Analyze the error type
           const errorLower = result.error.toLowerCase();
           
-          // Network/CORS errors - keep local session, don't log out
           const isNetworkError = 
             errorLower.includes('network') || 
             errorLower.includes('fetch') ||
@@ -103,11 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             errorLower.includes('timeout') ||
             errorLower.includes('aborted');
           
-          if (isNetworkError) {
-            // Network issue - keep using local session, don't disturb user
-            console.warn('Network error during token verification, keeping local session');
-          } else {
-            // Check for genuine authentication failures
+          if (!isNetworkError) {
             const isAuthFailure = 
               errorLower.includes('tidak valid') || 
               errorLower.includes('kadaluarsa') ||
@@ -118,18 +104,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               errorLower.includes('401');
             
             if (isAuthFailure) {
-              // Token is definitely invalid - clear session
-              console.log('Token expired or invalid, clearing session');
               removeAuthToken();
               saveCurrentUser(null);
               setUser(null);
             }
-            // For other server errors (500, etc.), keep session
           }
         }
       } catch (error) {
-        // Exception during verification - keep local session
-        console.warn('Exception during token verification, keeping cached session:', error);
+        // Keep local session on exception
       }
       
       setLoading(false);
@@ -140,7 +122,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [verificationDone]);
 
   const signUp = async (email: string, password: string, fullName: string): Promise<{ error: Error | null }> => {
-    // Check if email is allowed
     if (email.toLowerCase() !== ALLOWED_EMAIL.toLowerCase()) {
       return { error: new Error('Email tidak diizinkan untuk mendaftar. Hanya email yang terdaftar yang dapat mengakses sistem ini.') };
     }
@@ -152,7 +133,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: new Error(result.error || 'Terjadi kesalahan saat mendaftar') };
       }
 
-      // Save token and user
       setAuthToken(result.data.token);
       
       const authUser: AuthUser = {
@@ -170,7 +150,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signIn = async (email: string, password: string): Promise<{ error: Error | null }> => {
-    // Check if email is allowed
     if (email.toLowerCase() !== ALLOWED_EMAIL.toLowerCase()) {
       return { error: new Error('Email tidak diizinkan untuk login. Hanya email yang terdaftar yang dapat mengakses sistem ini.') };
     }
@@ -182,7 +161,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: new Error(result.error || 'Email atau password salah') };
       }
 
-      // Save token and user
       setAuthToken(result.data.token);
       
       const authUser: AuthUser = {
@@ -201,12 +179,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async (): Promise<void> => {
     try {
-      // Call logout API to invalidate token on server
       await authApi.logout();
     } catch (error) {
-      console.error('Logout error:', error);
+      // Silent catch
     } finally {
-      // Always clear local state
       removeAuthToken();
       saveCurrentUser(null);
       setUser(null);

@@ -65,39 +65,27 @@ function safeParseNumber(value: any, defaultValue: number = 0): number {
   strValue = strValue.replace(/[Rp\s]/gi, '');
   
   // Handle different number formats
-  // Format: 195.000 (Indonesian thousands separator) or 195,000 (US thousands)
-  // Format: 195.50 or 195,50 (decimals)
-  
-  // If it has multiple dots or commas, treat first as thousands separator
   const dotCount = (strValue.match(/\./g) || []).length;
   const commaCount = (strValue.match(/,/g) || []).length;
   
   if (dotCount > 1) {
-    // Multiple dots = thousands separator (e.g., 1.000.000)
     strValue = strValue.replace(/\./g, '');
   } else if (commaCount > 1) {
-    // Multiple commas = thousands separator
     strValue = strValue.replace(/,/g, '');
   } else if (dotCount === 1 && commaCount === 1) {
-    // Both present - comma is likely thousands separator (e.g., 1,000.50)
     strValue = strValue.replace(/,/g, '');
   } else if (commaCount === 1) {
-    // Single comma - could be decimal separator (Indonesian: 195,50) or thousands (US: 1,000)
     const afterComma = strValue.split(',')[1];
     if (afterComma && afterComma.length === 3 && !afterComma.includes('.')) {
-      // Likely thousands separator (e.g., 1,000)
       strValue = strValue.replace(/,/g, '');
     } else {
-      // Likely decimal separator (e.g., 195,50)
       strValue = strValue.replace(',', '.');
     }
   }
-  // Single dot is kept as decimal separator (standard)
   
   const parsed = parseFloat(strValue);
   
   if (isNaN(parsed) || !isFinite(parsed)) {
-    console.warn('[safeParseNumber] Failed to parse:', value, '-> using default:', defaultValue);
     return defaultValue;
   }
   
@@ -108,20 +96,9 @@ function safeParseNumber(value: any, defaultValue: number = 0): number {
 function transformApiProduct(apiProduct: ApiProduct) {
   const imageUrl = normalizeImageUrl(apiProduct.gambar);
   
-  // Parse numbers safely - ensure they're integers
   const hargaJual = safeParseNumber(apiProduct.harga, 0);
   const hargaBeli = safeParseNumber(apiProduct.harga_beli, Math.floor(hargaJual * 0.7));
   const stok = safeParseNumber(apiProduct.stok, 0);
-  
-  console.log('[transformApiProduct]', {
-    nama: apiProduct.nama,
-    rawHarga: apiProduct.harga,
-    rawHargaBeli: apiProduct.harga_beli,
-    parsedHargaJual: hargaJual,
-    parsedHargaBeli: hargaBeli,
-    gambarLength: apiProduct.gambar?.length || 0,
-    imageUrlValid: imageUrl !== '/placeholder.svg',
-  });
 
   return {
     id: apiProduct.id,
@@ -139,9 +116,6 @@ function transformApiProduct(apiProduct: ApiProduct) {
 
 // Transform API transaction to local format
 function transformApiTransaction(apiTransaction: ApiTransaction, index: number) {
-  console.log('[transformApiTransaction] Raw API data:', JSON.stringify(apiTransaction));
-  
-  // Safely parse numeric values - ensure they're always valid numbers
   const qty = safeParseNumber(apiTransaction.qty, 1);
   const harga = safeParseNumber(apiTransaction.harga, 0);
   
@@ -149,13 +123,10 @@ function transformApiTransaction(apiTransaction: ApiTransaction, index: number) 
   let total = safeParseNumber(apiTransaction.total, 0);
   const calculatedTotal = qty * harga;
   
-  // Use calculated total if API total is invalid or zero
   if (total === 0 || !isFinite(total) || isNaN(total)) {
-    console.log('[transformApiTransaction] Using calculated total:', calculatedTotal, 'instead of API total:', total);
     total = calculatedTotal;
   }
   
-  // Final safety check
   if (!isFinite(total) || isNaN(total)) {
     total = 0;
   }
@@ -165,7 +136,6 @@ function transformApiTransaction(apiTransaction: ApiTransaction, index: number) 
                          apiTransaction.payment_method || 
                          '';
   
-  // Clean the payment method string
   if (typeof rawPaymentMethod === 'string') {
     rawPaymentMethod = rawPaymentMethod.trim();
   } else {
@@ -184,14 +154,13 @@ function transformApiTransaction(apiTransaction: ApiTransaction, index: number) 
     } else if (lowerMethod === 'tokopedia' || lowerMethod === 'tokped') {
       normalizedMethod = 'Tokopedia';
     } else {
-      // Keep original if it matches exactly
       if (['Tunai', 'Shopee', 'Tokopedia'].includes(rawPaymentMethod)) {
         normalizedMethod = rawPaymentMethod as 'Tunai' | 'Shopee' | 'Tokopedia';
       }
     }
   }
   
-  const result = {
+  return {
     id: apiTransaction.id,
     no: apiTransaction.no || index + 1,
     tanggal: apiTransaction.tanggal ? new Date(apiTransaction.tanggal) : new Date(apiTransaction.created_at || new Date()),
@@ -202,15 +171,10 @@ function transformApiTransaction(apiTransaction: ApiTransaction, index: number) 
     total: isFinite(total) && !isNaN(total) ? total : 0,
     metode_pembayaran: normalizedMethod,
   };
-  
-  console.log('[transformApiTransaction] Transformed result:', JSON.stringify(result));
-  
-  return result;
 }
 
 // Transform API expense to local format
 function transformApiExpense(apiExpense: ApiExpense) {
-  // Parse cost safely to ensure it's a proper number
   const biaya = safeParseNumber(apiExpense.cost, 0);
   
   return {
@@ -225,6 +189,22 @@ function transformApiExpense(apiExpense: ApiExpense) {
   };
 }
 
+// Helper function to check for auth or network errors
+function isAuthOrNetworkError(error: string): boolean {
+  const errorLower = error.toLowerCase();
+  return (
+    errorLower.includes('login') ||
+    errorLower.includes('sesi') ||
+    errorLower.includes('network') ||
+    errorLower.includes('fetch') ||
+    errorLower.includes('failed to fetch') ||
+    errorLower.includes('cors') ||
+    errorLower.includes('timeout') ||
+    errorLower.includes('401') ||
+    errorLower.includes('unauthorized')
+  );
+}
+
 // Products Hook
 export function useApiProducts() {
   const [products, setProducts] = useState<ReturnType<typeof transformApiProduct>[]>([]);
@@ -233,37 +213,24 @@ export function useApiProducts() {
   const { toast } = useToast();
 
   const fetchProducts = useCallback(async () => {
-    // Check if user is authenticated before making API call
     const token = getAuthToken();
-    console.log('[useApiProducts] fetchProducts called, token exists:', !!token);
-    
     if (!token) {
-      console.log('[useApiProducts] No token, skipping fetch');
       setLoading(false);
-      return; // Don't fetch if not logged in
+      return;
     }
 
     setLoading(true);
     setError(null);
     
     try {
-      console.log('[useApiProducts] Calling productsApi.getAll()...');
       const result = await productsApi.getAll();
-      console.log('[useApiProducts] API result:', JSON.stringify(result).substring(0, 500));
       
       if (result.success) {
         const data = Array.isArray(result.data) ? result.data : [];
-        console.log('[useApiProducts] Setting products:', data.length, 'items');
-        if (data.length > 0) {
-          console.log('[useApiProducts] First product sample:', JSON.stringify(data[0]).substring(0, 200));
-        }
         const transformedProducts = data.map(transformApiProduct);
-        console.log('[useApiProducts] Transformed products count:', transformedProducts.length);
         setProducts(transformedProducts);
       } else {
-        console.error('[useApiProducts] API returned error:', result.error);
         setError(result.error || 'Gagal memuat produk');
-        // Only show toast for non-auth and non-network errors
         if (result.error && !isAuthOrNetworkError(result.error)) {
           toast({
             title: 'Error',
@@ -273,7 +240,7 @@ export function useApiProducts() {
         }
       }
     } catch (err) {
-      console.error('[useApiProducts] Exception during fetch:', err);
+      // Silent catch - error already handled
     } finally {
       setLoading(false);
     }
@@ -287,17 +254,8 @@ export function useApiProducts() {
     harga_beli?: number; 
     harga_jual: number; 
   }) => {
-    // Image is now handled as URL (uploaded to server) or kept as-is
     const imageUrl = data.gambar || '';
     
-    console.log('[useApiProducts] Adding product:', {
-      nama: data.nama_produk,
-      kode: data.kode_produk,
-      hasImage: !!imageUrl,
-      imageIsUrl: imageUrl.startsWith('http'),
-    });
-    
-    // Send ALL fields to backend - field names must match PHP API expectations
     const result = await productsApi.create({
       kode_produk: data.kode_produk,
       nama: data.nama_produk,
@@ -307,18 +265,11 @@ export function useApiProducts() {
       stok: data.jumlah_stok,
     });
     
-    console.log('[useApiProducts] Add result:', { success: result.success, error: result.error });
-    
     if (result.success) {
-      console.log('[useApiProducts] Add successful, waiting before refetch...');
-      // Small delay to ensure database commit completes
       await new Promise(resolve => setTimeout(resolve, 500));
-      console.log('[useApiProducts] Now refetching products...');
       await fetchProducts();
-      console.log('[useApiProducts] Refetch completed');
       return { success: true };
     } else {
-      console.error('[useApiProducts] Add failed:', result.error);
       toast({
         title: 'Error',
         description: result.error || 'Gagal menambah produk',
@@ -336,16 +287,8 @@ export function useApiProducts() {
     harga_jual: number;
     jumlah_stok: number;
   }>) => {
-    // Image is now handled as URL (uploaded to server) or kept as-is
     const imageUrl = data.gambar || '';
     
-    console.log('[useApiProducts] Updating product:', {
-      id,
-      hasImage: !!imageUrl,
-      imageIsUrl: imageUrl.startsWith('http'),
-    });
-    
-    // Send ALL provided fields to backend
     const result = await productsApi.update({
       id,
       kode_produk: data.kode_produk,
@@ -357,7 +300,6 @@ export function useApiProducts() {
     });
     
     if (result.success) {
-      // Small delay to ensure database commit completes
       await new Promise(resolve => setTimeout(resolve, 500));
       await fetchProducts();
       return { success: true };
@@ -375,7 +317,6 @@ export function useApiProducts() {
     const result = await productsApi.delete(id);
     
     if (result.success) {
-      // Small delay to ensure database commit completes
       await new Promise(resolve => setTimeout(resolve, 500));
       await fetchProducts();
       return { success: true };
@@ -404,22 +345,6 @@ export function useApiProducts() {
   };
 }
 
-// Helper function to check for auth or network errors
-function isAuthOrNetworkError(error: string): boolean {
-  const errorLower = error.toLowerCase();
-  return (
-    errorLower.includes('login') ||
-    errorLower.includes('sesi') ||
-    errorLower.includes('network') ||
-    errorLower.includes('fetch') ||
-    errorLower.includes('failed to fetch') ||
-    errorLower.includes('cors') ||
-    errorLower.includes('timeout') ||
-    errorLower.includes('401') ||
-    errorLower.includes('unauthorized')
-  );
-}
-
 // Transactions Hook
 export function useApiTransactions() {
   const [transactions, setTransactions] = useState<ReturnType<typeof transformApiTransaction>[]>([]);
@@ -428,33 +353,24 @@ export function useApiTransactions() {
   const { toast } = useToast();
 
   const fetchTransactions = useCallback(async () => {
-    // Check if user is authenticated before making API call
     const token = getAuthToken();
-    console.log('[useApiTransactions] fetchTransactions called, token exists:', !!token);
-    
     if (!token) {
-      console.log('[useApiTransactions] No token, skipping fetch');
       setLoading(false);
-      return; // Don't fetch if not logged in
+      return;
     }
 
     setLoading(true);
     setError(null);
     
     try {
-      console.log('[useApiTransactions] Calling transactionsApi.getAll()...');
       const result = await transactionsApi.getAll();
-      console.log('[useApiTransactions] API result success:', result.success, 'data count:', Array.isArray(result.data) ? result.data.length : 'N/A');
       
       if (result.success) {
         const data = Array.isArray(result.data) ? result.data : [];
-        console.log('[useApiTransactions] Setting transactions:', data.length, 'items');
         const transformedTransactions = data.map((t, i) => transformApiTransaction(t, i));
         setTransactions(transformedTransactions);
       } else {
-        console.error('[useApiTransactions] API returned error:', result.error);
         setError(result.error || 'Gagal memuat transaksi');
-        // Only show toast for non-auth and non-network errors
         if (result.error && !isAuthOrNetworkError(result.error)) {
           toast({
             title: 'Error',
@@ -464,7 +380,7 @@ export function useApiTransactions() {
         }
       }
     } catch (err) {
-      console.error('[useApiTransactions] Exception during fetch:', err);
+      // Silent catch
     } finally {
       setLoading(false);
     }
@@ -477,7 +393,6 @@ export function useApiTransactions() {
     metode_pembayaran?: PaymentMethodType;
     product_id?: string;
   }) => {
-    console.log('[useApiTransactions] Creating transaction:', data);
     const result = await transactionsApi.create({
       nama_produk: data.nama_produk,
       qty: data.qty,
@@ -486,16 +401,11 @@ export function useApiTransactions() {
       product_id: data.product_id,
     });
     
-    console.log('[useApiTransactions] Create result success:', result.success);
-    
     if (result.success) {
-      console.log('[useApiTransactions] Create successful, waiting before refetch...');
       await new Promise(resolve => setTimeout(resolve, 500));
       await fetchTransactions();
-      console.log('[useApiTransactions] Refetch completed');
       return { success: true };
     } else {
-      console.error('[useApiTransactions] Create failed:', result.error);
       toast({
         title: 'Error',
         description: result.error || 'Gagal membuat transaksi',
@@ -565,33 +475,24 @@ export function useApiExpenses() {
   const { toast } = useToast();
 
   const fetchExpenses = useCallback(async () => {
-    // Check if user is authenticated before making API call
     const token = getAuthToken();
-    console.log('[useApiExpenses] fetchExpenses called, token exists:', !!token);
-    
     if (!token) {
-      console.log('[useApiExpenses] No token, skipping fetch');
       setLoading(false);
-      return; // Don't fetch if not logged in
+      return;
     }
 
     setLoading(true);
     setError(null);
     
     try {
-      console.log('[useApiExpenses] Calling expensesApi.getAll()...');
       const result = await expensesApi.getAll();
-      console.log('[useApiExpenses] API result success:', result.success, 'data count:', Array.isArray(result.data) ? result.data.length : 'N/A');
       
       if (result.success) {
         const data = Array.isArray(result.data) ? result.data : [];
-        console.log('[useApiExpenses] Setting expenses:', data.length, 'items');
         const transformedExpenses = data.map(transformApiExpense);
         setExpenses(transformedExpenses);
       } else {
-        console.error('[useApiExpenses] API returned error:', result.error);
         setError(result.error || 'Gagal memuat pengeluaran');
-        // Only show toast for non-auth and non-network errors
         if (result.error && !isAuthOrNetworkError(result.error)) {
           toast({
             title: 'Error',
@@ -601,7 +502,7 @@ export function useApiExpenses() {
         }
       }
     } catch (err) {
-      console.error('[useApiExpenses] Exception during fetch:', err);
+      // Silent catch
     } finally {
       setLoading(false);
     }
@@ -614,9 +515,6 @@ export function useApiExpenses() {
     biaya: number;
     catatan?: string;
   }) => {
-    console.log('[useApiExpenses] Adding expense:', data);
-    
-    // Prepare payload - ensure notes is always a string (empty if not provided)
     const payload = {
       category: data.kategori,
       description: data.keterangan,
@@ -625,20 +523,13 @@ export function useApiExpenses() {
       notes: data.catatan?.trim() || '',
     };
     
-    console.log('[useApiExpenses] Payload to API:', payload);
-    
     const result = await expensesApi.create(payload);
     
-    console.log('[useApiExpenses] Add result success:', result.success);
-    
     if (result.success) {
-      console.log('[useApiExpenses] Add successful, waiting before refetch...');
       await new Promise(resolve => setTimeout(resolve, 500));
       await fetchExpenses();
-      console.log('[useApiExpenses] Refetch completed');
       return { success: true };
     } else {
-      console.error('[useApiExpenses] Add failed:', result.error);
       toast({
         title: 'Error',
         description: result.error || 'Gagal menambah pengeluaran',

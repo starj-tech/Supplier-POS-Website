@@ -42,30 +42,19 @@ async function apiRequest<T>(
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    console.log(`[API] ${options.method || 'GET'} ${endpoint}`);
-    console.log(`[API] Request headers:`, headers);
-    if (options.body) {
-      console.log(`[API] Request body:`, options.body);
-    }
-
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
       headers,
       mode: 'cors',
     });
 
-    console.log(`[API] Response status:`, response.status);
-
     // Try to parse JSON response
     let result;
     const responseText = await response.text();
-    console.log(`[API] Raw response:`, responseText);
     
     try {
       result = responseText ? JSON.parse(responseText) : {};
-      console.log(`[API] Parsed response:`, result);
     } catch (parseError) {
-      console.error('[API] Failed to parse response:', responseText);
       return { 
         success: false, 
         error: `Server error: Invalid JSON response (${response.status})` 
@@ -92,7 +81,6 @@ async function apiRequest<T>(
     
     return { success: true, data };
   } catch (error) {
-    console.error('[API] Error:', error);
     // Return more descriptive error for debugging
     const errorMessage = error instanceof Error ? error.message : 'Network error';
     return { 
@@ -262,8 +250,6 @@ export const uploadApi = {
       const formData = new FormData();
       formData.append('image', file);
 
-      console.log('[uploadApi] Uploading file:', file.name, 'size:', file.size);
-
       const response = await fetch(`${API_BASE_URL}/upload/`, {
         method: 'POST',
         headers: {
@@ -275,13 +261,11 @@ export const uploadApi = {
       });
 
       const responseText = await response.text();
-      console.log('[uploadApi] Response:', responseText);
 
       let result;
       try {
         result = responseText ? JSON.parse(responseText) : {};
       } catch (parseError) {
-        console.error('[uploadApi] Failed to parse response:', responseText);
         return { success: false, error: 'Server error: Invalid response' };
       }
 
@@ -291,7 +275,6 @@ export const uploadApi = {
 
       return { success: true, data: result.data };
     } catch (error) {
-      console.error('[uploadApi] Error:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Network error' };
     }
   },

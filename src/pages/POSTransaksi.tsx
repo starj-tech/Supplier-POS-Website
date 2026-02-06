@@ -150,8 +150,8 @@ const POSTransaksi = () => {
     
     // Create transactions for each cart item
     let allSuccess = true;
+    let lastError = '';
     for (const item of cart) {
-      console.log('[POS] Creating transaction for:', item.product.nama_produk, 'Payment:', paymentMethod);
       const result = await createTransaction({
         nama_produk: item.product.nama_produk,
         qty: item.qty,
@@ -160,10 +160,14 @@ const POSTransaksi = () => {
         product_id: item.product.id,
       });
       
-      console.log('[POS] Transaction result:', result);
-      
       if (!result.success) {
         allSuccess = false;
+        lastError = result.error || 'Gagal menyimpan transaksi';
+        toast({
+          title: 'Gagal Menyimpan Transaksi',
+          description: lastError,
+          variant: 'destructive',
+        });
         break;
       }
     }
