@@ -244,10 +244,7 @@ const RiwayatTransaksi = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredTransactions
-                    .slice()
-                    .reverse()
-                    .map((transaction) => (
+                  filteredTransactions.map((transaction) => (
                       <TableRow key={transaction.id} className="animate-fade-in">
                         <TableCell className="font-mono">
                           {transaction.no}
